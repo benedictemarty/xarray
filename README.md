@@ -57,7 +57,7 @@ Trois niveaux, calqués sur xarray :
 |-------------|----------------------------------------------------------------------|-------------|
 | `Variable`  | Données plates + dimensions nommées + attributs (brique de base)     | ✅ Sprint 1 |
 | `DataArray` | `Variable` + coordonnées étiquetées + nom (indexation par label)     | ✅ Sprint 1 |
-| `Dataset`   | Collection de `DataArray` partageant dimensions et coordonnées       | 🔜 Sprint 3 |
+| `Dataset`   | Collection de `DataArray` partageant dimensions et coordonnées       | ✅ Sprint 3 |
 
 Voir [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) pour les détails.
 
@@ -68,7 +68,7 @@ Voir [`docs/agile/ROADMAP.md`](docs/agile/ROADMAP.md) et le
 
 - **Sprint 1** — Cœur `Variable` / `DataArray` (indexation `isel`/`sel`, réductions) ✅
 - **Sprint 2** — Opérations : broadcasting, alignement, arithmétique, réductions par axe ✅
-- **Sprint 3** — `Dataset`
+- **Sprint 3** — `Dataset` (regroupement, `sel`/`isel` et réductions propagés, fusion) ✅
 - **Sprint 4** — Entrées/sorties (CSV, JSON, netCDF)
 
 ## Développement

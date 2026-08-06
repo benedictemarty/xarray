@@ -66,6 +66,9 @@ func (da *DataArray) Rename(name string) *DataArray {
 // Dims renvoie les noms de dimensions.
 func (da *DataArray) Dims() []string { return da.variable.Dims() }
 
+// HasDim indique si le tableau possède la dimension dim.
+func (da *DataArray) HasDim(dim string) bool { return da.variable.dimIndex(dim) != -1 }
+
 // Shape renvoie la forme du tableau.
 func (da *DataArray) Shape() []int { return da.variable.Shape() }
 

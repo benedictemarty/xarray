@@ -7,6 +7,23 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 3 — `Dataset`)
+
+- **Type `Dataset`** : collection de `DataArray` (« variables de données »)
+  partageant un système commun de dimensions et de coordonnées.
+  - Construction validée (`NewDataset`) : vérifie la cohérence des tailles de
+    dimensions et l'identité des coordonnées partagées entre variables.
+  - Accès : `VarNames`, `Get`, `Dims`, `Coord`.
+  - Indexation propagée : `Isel` (position) et `Sel` (label via coordonnée
+    partagée) appliquées à toutes les variables portant la dimension visée.
+  - Réductions propagées : `SumAxis`, `MeanAxis`, `MinAxis`, `MaxAxis` (les
+    variables sans la dimension restent inchangées).
+  - Gestion des variables : `WithVar`, `DropVars`, `Merge`.
+  - Représentation lisible via `String`.
+- Helper `DataArray.HasDim`.
+- Tests : cohérence, indexation et réductions propagées (y compris dimension
+  partielle), fusion, cas d'erreur.
+
 ### Ajouté (Sprint 2 — Opérations)
 
 - **`Transpose`** (sur `Variable` et `DataArray`) : réordonnancement des axes par

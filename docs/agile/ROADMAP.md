@@ -25,13 +25,15 @@ Objectif : rendre les tableaux « calculables ».
 
 **Statut : terminé.**
 
-## Sprint 3 — `Dataset`
+## Sprint 3 — `Dataset` ✅
 
 Objectif : manipuler des collections cohérentes de variables.
 
 - Type `Dataset` (map de `DataArray` partageant dimensions/coordonnées).
-- Propagation de `sel`/`isel`.
-- Fusion / sélection de variables.
+- Propagation de `sel`/`isel` et des réductions par axe.
+- Ajout/suppression de variables (`WithVar`, `DropVars`), fusion (`Merge`).
+
+**Statut : terminé.**
 
 ## Sprint 4 — Entrées / sorties
 

@@ -30,9 +30,9 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 
 | ID    | User story | Prio | État |
 |-------|------------|------|------|
-| US-11 | En tant qu'utilisateur, je veux regrouper plusieurs `DataArray` dans un `Dataset`. | P0 | 🔜 S3 |
-| US-12 | En tant qu'utilisateur, je veux indexer un `Dataset` entier (`sel`/`isel` propagé). | P0 | 🔜 S3 |
-| US-13 | En tant qu'utilisateur, je veux fusionner des `Dataset`. | P2 | 🔜 S3 |
+| US-11 | En tant qu'utilisateur, je veux regrouper plusieurs `DataArray` dans un `Dataset`. | P0 | ✅ Fait (S3) |
+| US-12 | En tant qu'utilisateur, je veux indexer un `Dataset` entier (`sel`/`isel` propagé). | P0 | ✅ Fait (S3) |
+| US-13 | En tant qu'utilisateur, je veux fusionner des `Dataset`. | P2 | ✅ Fait (S3) |
 
 ## Épopée 4 — Entrées / sorties
 
