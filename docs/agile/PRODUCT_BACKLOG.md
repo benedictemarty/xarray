@@ -24,6 +24,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-07 | En tant qu'utilisateur, je veux des opérations arithmétiques élément par élément entre tableaux. | P0 | ✅ Fait (S2) |
 | US-08 | En tant qu'utilisateur, je veux le broadcasting par nom de dimension. | P0 | ✅ Fait (S2) |
 | US-09 | En tant qu'utilisateur, je veux l'alignement automatique sur les coordonnées avant opération. | P1 | ✅ Fait (S2) |
+| US-17 | En tant qu'utilisateur, je veux choisir la stratégie de jointure (inner/outer/left/right) lors des opérations. | P1 | ✅ Fait (S6) |
 | US-10 | En tant qu'utilisateur, je veux `transpose` / réordonner les dimensions. | P1 | ✅ Fait (S2) |
 
 ## Épopée 3 — Dataset

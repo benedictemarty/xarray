@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 6 — Jointures externes)
+
+- **Stratégies de jointure** pour l'alignement des coordonnées avant opération :
+  type `JoinType` (`JoinInner`, `JoinOuter`, `JoinLeft`, `JoinRight`).
+- **Opérations avec jointure et remplissage** : `AddJoin`, `SubJoin`, `MulJoin`,
+  `DivJoin(other, join, fill)`. Les étiquettes manquantes sont comblées par la
+  valeur `fill` fournie (nécessaire car il n'existe pas de NaN universel pour les
+  entiers).
+- Primitives : `Variable.takeFill` (sélection avec indice -1 → remplissage),
+  `DataArray.reindex` (réalignement sur des étiquettes cibles).
+- Tests : jointures inner/outer/left/right, remplissage personnalisé, cas 2D.
+
 ## [0.1.0] — 2026-08-06
 
 Première version publiée : modèle de données étiqueté complet (DataArray,
