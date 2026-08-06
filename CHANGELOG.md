@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 23 — ML classique : paquet `ml`)
+
+- **Nouveau paquet `ml`** (sur `ndarray`) :
+  - `Standardize` : centrage-réduction par colonne (moyenne/écart-type).
+  - `LinearRegression` : régression linéaire par descente de gradient
+    (`Fit`/`Predict`), `MSE`.
+- Test de convergence : apprend `y = 2·x₁ + 3·x₂ + 1` (poids/biais retrouvés,
+  MSE ≈ 0).
+- Portée assumée : ML classique/pédagogique (pas d'autograd ni de GPU ; Go sert
+  surtout à l'inférence en production).
+
 ### Ajouté (Sprint 22 — Algèbre linéaire `ndarray`)
 
 - **`Matmul`** (produit matriciel 2D, ordre ikj cache-friendly), **`MatVec`**
