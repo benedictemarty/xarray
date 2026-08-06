@@ -20,11 +20,11 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 
 | ID    | User story | Prio | État |
 |-------|------------|------|------|
-| US-06 | En tant qu'utilisateur, je veux des réductions par axe (`sum`, `mean`… le long d'une dimension). | P0 | 🔜 S2 |
-| US-07 | En tant qu'utilisateur, je veux des opérations arithmétiques élément par élément entre tableaux. | P0 | 🔜 S2 |
-| US-08 | En tant qu'utilisateur, je veux le broadcasting par nom de dimension. | P0 | 🔜 S2 |
-| US-09 | En tant qu'utilisateur, je veux l'alignement automatique sur les coordonnées avant opération. | P1 | 🔜 S2 |
-| US-10 | En tant qu'utilisateur, je veux `transpose` / réordonner les dimensions. | P1 | 🔜 S2 |
+| US-06 | En tant qu'utilisateur, je veux des réductions par axe (`sum`, `mean`… le long d'une dimension). | P0 | ✅ Fait (S2) |
+| US-07 | En tant qu'utilisateur, je veux des opérations arithmétiques élément par élément entre tableaux. | P0 | ✅ Fait (S2) |
+| US-08 | En tant qu'utilisateur, je veux le broadcasting par nom de dimension. | P0 | ✅ Fait (S2) |
+| US-09 | En tant qu'utilisateur, je veux l'alignement automatique sur les coordonnées avant opération. | P1 | ✅ Fait (S2) |
+| US-10 | En tant qu'utilisateur, je veux `transpose` / réordonner les dimensions. | P1 | ✅ Fait (S2) |
 
 ## Épopée 3 — Dataset
 

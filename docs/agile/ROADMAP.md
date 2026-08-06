@@ -13,15 +13,17 @@ Objectif : poser une fondation solide et testée du modèle de données étiquet
 
 **Statut : terminé.**
 
-## Sprint 2 — Opérations
+## Sprint 2 — Opérations ✅
 
 Objectif : rendre les tableaux « calculables ».
 
-- Réductions le long d'une dimension (`SumAxis`, `MeanAxis`…).
+- Réductions le long d'une dimension (`SumAxis`, `MeanAxis`, `MinAxis`, `MaxAxis`).
 - Arithmétique élément par élément (`Add`, `Sub`, `Mul`, `Div`).
 - Broadcasting par nom de dimension.
-- Alignement automatique sur les coordonnées.
-- `Transpose`.
+- Alignement automatique sur les coordonnées (jointure interne).
+- `Transpose` ; opérations scalaires (`AddScalar`, `MulScalar`).
+
+**Statut : terminé.**
 
 ## Sprint 3 — `Dataset`
 

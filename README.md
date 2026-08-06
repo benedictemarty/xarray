@@ -67,7 +67,7 @@ Voir [`docs/agile/ROADMAP.md`](docs/agile/ROADMAP.md) et le
 [backlog produit](docs/agile/PRODUCT_BACKLOG.md).
 
 - **Sprint 1** — Cœur `Variable` / `DataArray` (indexation `isel`/`sel`, réductions) ✅
-- **Sprint 2** — Opérations : broadcasting, alignement, arithmétique, réductions par axe
+- **Sprint 2** — Opérations : broadcasting, alignement, arithmétique, réductions par axe ✅
 - **Sprint 3** — `Dataset`
 - **Sprint 4** — Entrées/sorties (CSV, JSON, netCDF)
 

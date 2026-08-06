@@ -7,6 +7,22 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 2 — Opérations)
+
+- **`Transpose`** (sur `Variable` et `DataArray`) : réordonnancement des axes par
+  permutation des noms de dimensions ; coordonnées conservées.
+- **Réductions par axe** (`SumAxis`, `MeanAxis`, `MinAxis`, `MaxAxis`) : réduisent
+  une dimension nommée et retirent sa coordonnée du résultat.
+- **Arithmétique entre `DataArray`** (`Add`, `Sub`, `Mul`, `Div`) avec :
+  - **broadcasting par nom de dimension** (et non par position) ;
+  - **alignement automatique** sur les coordonnées (jointure interne sur les
+    étiquettes communes) avant l'opération.
+- **Opérations scalaires** (`AddScalar`, `MulScalar`) préservant les coordonnées.
+- Primitives bas niveau : `Variable.take` (sélection multi-positions),
+  `binaryOp` (broadcasting), `reduceAxis`, `mapScalar`.
+- Tests : broadcasting, alignement, réductions par axe (2D et 3D), scalaires,
+  cas d'erreur (tailles incompatibles, absence d'étiquette commune).
+
 ### Ajouté (Sprint 1 — Cœur `Variable` / `DataArray`)
 
 - **Type `Variable`** : tableau N-dimensionnel bas niveau (données `float64` à plat
