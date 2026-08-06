@@ -7,6 +7,20 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 15 — Paquet `ndarray`, moteur « mini-NumPy »)
+
+- **Nouveau paquet `ndarray`** : tableau dense N-D `float64` spécialisé (sans
+  générique/closure sur le chemin chaud), avec broadcasting **positionnel façon
+  NumPy** (aligné à droite).
+  - Construction (`New`, `Zeros`, `Arange`), accès (`At`, `Shape`, `Data`…) ;
+  - arithmétique `Add`/`Sub`/`Mul`/`Div` (même forme + broadcasting), scalaires ;
+  - réductions `Sum`, `Mean`, `SumAxis`, `MeanAxis` ; tests complets.
+- **Conclusion mesurée et documentée** (`docs/NDARRAY.md`) : même un moteur Go nu
+  reste 2,3×–4,5× plus lent que NumPy pur. Rattraper NumPy exige C+SIMD+BLAS ;
+  ce n'est pas atteignable en Go idiomatique. Le paquet a une valeur
+  architecturale (moteur propre, socle potentiel de `Variable[float64]`), pas de
+  supériorité de débit.
+
 ### Performances (Sprint 14 — SIMD et chemin direct float64)
 
 - **Noyau SIMD AVX** en assembleur (`simd_amd64.s`) : addition `float64` via
