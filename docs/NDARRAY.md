@@ -17,7 +17,13 @@ non inlinée (un appel par élément) et l'**overhead d'alignement/coordonnées*
 **Inclus** : construction (`New`, `Zeros`, `Arange`), accès (`At`, `Shape`,
 `Data`…), arithmétique (`Add`/`Sub`/`Mul`/`Div`, même forme **et** broadcasting),
 scalaires (`AddScalar`, `MulScalar`), réductions (`Sum`, `Mean`, `SumAxis`,
-`MeanAxis`).
+`MeanAxis`), algèbre 2D (`Matmul`, `MatVec`, `T`).
+
+**Algèbre linéaire — attention aux performances.** `Matmul` utilise un ordre de
+boucle *cache-friendly* (ikj) mais reste **naïf** : pas de *blocking*, pas de
+SIMD, pas de multithread. Mesuré sur 256×256 : **~11,9 ms** contre **~4,7 ms**
+pour NumPy (BLAS), soit ~2,5× plus lent. Pour de grosses matrices ou du ML
+sérieux, il faudrait un BLAS (gonum en mode cgo, ou une lib externe).
 
 **Volontairement exclu** (ce n'est PAS un portage complet de NumPy) : algèbre
 linéaire (matmul, décompositions — voir gonum), dtypes multiples, vues/slicing

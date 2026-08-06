@@ -7,6 +7,13 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 22 — Algèbre linéaire `ndarray`)
+
+- **`Matmul`** (produit matriciel 2D, ordre ikj cache-friendly), **`MatVec`**
+  (matrice × vecteur), **`T`** (transposée 2D). Base pour le ML classique.
+- Perf documentée : `Matmul` naïf ~2,5× plus lent que NumPy/BLAS (256×256) — un
+  BLAS serait requis pour de grosses matrices (voir `docs/NDARRAY.md`).
+
 ### Performances (Sprint 21 — Broadcast par lignes, itération strided optimisée)
 
 - **Réécriture du broadcast float64 en itération par lignes** : boucle interne
