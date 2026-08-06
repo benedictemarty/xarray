@@ -1,0 +1,15 @@
+# Binaires
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Couverture
+coverage.out
+coverage.html
+
+# Divers
+.DS_Store
+vendor/
