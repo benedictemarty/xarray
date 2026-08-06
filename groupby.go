@@ -55,9 +55,17 @@ func (g *GroupBy[T]) Labels() []T { return append([]T(nil), g.labels...) }
 // groupe puis empile les résultats sur la dimension groupée. Le type de sortie R
 // peut différer de T (ex. moyenne -> float64).
 func groupReduce[T, R Number](g *GroupBy[T], reducer func(*DataArray[T]) (*DataArray[R], error)) (*DataArray[R], error) {
-	slices := make([]*DataArray[R], len(g.groups))
-	for i, idxs := range g.groups {
-		sub, err := g.da.takeAlong(g.dim, idxs)
+	return groupReduceOn(g.da, g.dim, g.groups, g.labels, reducer)
+}
+
+// groupReduceOn applique reducer à chaque groupe (défini par groups/labels sur
+// la dimension dim) d'un DataArray, puis empile les résultats. Découplé de la
+// coordonnée propre du tableau, il est réutilisable au niveau Dataset (où la
+// coordonnée de groupement est partagée).
+func groupReduceOn[T, R Number](da *DataArray[T], dim string, groups [][]int, labels []T, reducer func(*DataArray[T]) (*DataArray[R], error)) (*DataArray[R], error) {
+	slices := make([]*DataArray[R], len(groups))
+	for i, idxs := range groups {
+		sub, err := da.takeAlong(dim, idxs)
 		if err != nil {
 			return nil, err
 		}
@@ -67,11 +75,11 @@ func groupReduce[T, R Number](g *GroupBy[T], reducer func(*DataArray[T]) (*DataA
 		}
 		slices[i] = r
 	}
-	labelsR := make([]R, len(g.labels))
-	for i, l := range g.labels {
+	labelsR := make([]R, len(labels))
+	for i, l := range labels {
 		labelsR[i] = convertNum[T, R](l)
 	}
-	return stackDim(slices, g.dim, labelsR)
+	return stackDim(slices, dim, labelsR)
 }
 
 // stackDim empile des tranches de forme identique le long d'une nouvelle

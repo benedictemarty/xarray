@@ -7,6 +7,21 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 17 — `skipna`)
+
+- **Réductions ignorant les NaN** : globales (`SumSkipNA`, `MeanSkipNA`,
+  `MinSkipNA`, `MaxSkipNA`) et par axe (`SumAxisSkipNA`, `MeanAxisSkipNA`,
+  `MinAxisSkipNA`, `MaxAxisSkipNA`), conformes au comportement par défaut de
+  xarray. Sans effet pour les types entiers (aucun NaN possible).
+
+### Ajouté (Sprint 18 — `Dataset.GroupBy`)
+
+- **`Dataset.GroupBy(dim)`** : regroupement propagé à toutes les variables
+  portant la dimension, avec agrégations `Sum`, `Mean`, `Min`, `Max` ; les
+  variables sans la dimension sont conservées.
+- Refactorisation : `groupReduceOn` (réduction de groupe découplée de la
+  coordonnée propre) réutilisée par `DataArray.GroupBy` et `Dataset.GroupBy`.
+
 ### Performances (Sprint 16 — API in-place `ndarray`)
 
 - **Opérations in-place** (`AddInto`, `SubInto`, `MulInto`, `DivInto`,

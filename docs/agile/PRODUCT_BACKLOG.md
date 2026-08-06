@@ -49,6 +49,11 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 |-------|------------|------|------|
 | US-18 | En tant qu'utilisateur, je veux regrouper (`groupby`) et agréger par valeur de coordonnée. | P1 | ✅ Fait (S9) |
 | US-19 | En tant qu'utilisateur, je veux comparer les performances xarray-go vs xarray (Python). | P2 | ✅ Fait (S10) |
+| US-20 | En tant qu'utilisateur, je veux des jointures externes (inner/outer/left/right). | P1 | ✅ Fait (S6) |
+| US-21 | En tant qu'utilisateur, je veux `concat` et `stack`. | P1 | ✅ Fait (S12) |
+| US-22 | En tant qu'utilisateur, je veux des réductions ignorant les NaN (`skipna`). | P1 | ✅ Fait (S17) |
+| US-23 | En tant qu'utilisateur, je veux `Dataset.GroupBy`. | P1 | ✅ Fait (S18) |
+| US-24 | En tant qu'utilisateur, je veux un moteur de calcul dense performant (`ndarray`). | P2 | ✅ Fait (S15-16) |
 
 ## Dette / transverse
 
