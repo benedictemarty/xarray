@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Performances (Sprint 11 — Alignement)
+
+- **`align` — chemin rapide « coordonnées identiques »** : lorsqu'une dimension
+  porte des coordonnées identiques des deux côtés, aucune réindexation n'est
+  effectuée (suppression de deux copies via `takeAlong`). Gain majeur sur `Add` :
+  272 µs → **48 µs**, 135 → **18 allocations**. xarray-go passe devant NumPy sur
+  l'arithmétique alignée (voir `docs/BENCHMARKS.md`).
+
 ### Ajouté (Sprint 10 — Volet performance xarray-go vs xarray Python)
 
 - **Comparaison de performance** documentée (`docs/BENCHMARKS.md`) contre

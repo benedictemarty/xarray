@@ -136,6 +136,11 @@ func align[T Number](a, b *DataArray[T]) (*DataArray[T], *DataArray[T], error) {
 		if !okA || !okB {
 			continue
 		}
+		// Chemin rapide : coordonnées déjà identiques -> aucune réindexation
+		// (évite deux copies via takeAlong sur ce cas très fréquent).
+		if sameSlice(ca.data, cb.data) {
+			continue
+		}
 		posB := make(map[T]int, len(cb.data))
 		for i, l := range cb.data {
 			posB[l] = i

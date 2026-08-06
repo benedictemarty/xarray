@@ -20,39 +20,47 @@ identiques.
 
 | Opération | Taille | xarray-go | xarray (Python) | Rapport | Gagnant |
 |-----------|--------|-----------|-----------------|---------|---------|
-| `Add` (élément par élément) | 100×100 | **272 µs** | 232 µs | 1,2× | Python |
-| `Broadcast` (par nom) | 200×200 | 274 µs | **128 µs** | 2,1× | Python |
-| `SumAxis` (réduction) | 100×100 | **14 µs** | 89 µs | 6,3× | **Go** |
-| `MeanAxis` (réduction) | 100×100 | **15 µs** | 82 µs | 5,6× | **Go** |
-| `GroupBy.Sum` | 1000×10, 10 groupes | **143 µs** | 2017 µs | 14× | **Go** |
+| `Add` (élément par élément) | 100×100 | **48 µs** | 222 µs | 4,6× | **Go** |
+| `Broadcast` (par nom) | 200×200 | 284 µs | **106 µs** | 2,7× | Python |
+| `SumAxis` (réduction) | 100×100 | **14 µs** | 75 µs | 5,5× | **Go** |
+| `MeanAxis` (réduction) | 100×100 | **15 µs** | 69 µs | 4,7× | **Go** |
+| `GroupBy.Sum` | 1000×10, 10 groupes | **137 µs** | 1671 µs | 12× | **Go** |
 
 ## Lecture des résultats
 
-Le résultat est **nuancé** — aucun des deux n'est uniformément meilleur :
+xarray-go gagne désormais **4 opérations sur 5** :
 
-- **NumPy gagne sur le calcul élément par élément à grande taille** (`Add`,
-  `Broadcast`). Ses boucles sont du C vectorisé (SIMD) ; notre `binaryOp` est une
-  boucle Go scalaire. L'écart reste modéré (1,2× à 2,1×) et se resserre depuis
-  l'ajout du chemin rapide « dimensions identiques ».
+- **xarray-go gagne sur les réductions, le `groupby` et l'arithmétique alignée**
+  (4,6×–12×). Le coût de xarray y est dominé par l'**overhead Python** (création
+  d'objets, dispatch dynamique, passage par pandas pour `groupby`). Pour `Add`,
+  l'optimisation de l'alignement (voir Sprint 11 : les coordonnées identiques ne
+  sont plus recopiées) a fait passer l'opération de 272 µs à 48 µs.
 
-- **xarray-go gagne largement sur les réductions et le `groupby`** (5×–14×). Là,
-  le coût de xarray est dominé par l'**overhead Python** : création d'objets,
-  dispatch dynamique, et — pour `groupby` — le passage par pandas. Go compile en
-  code natif sans cette surcharge.
+- **NumPy garde l'avantage sur `Broadcast`** — le seul cas restant. C'est du
+  calcul élément par élément pur, à grande taille (40 000 éléments), **sans
+  coordonnées** (donc rien à optimiser côté alignement) : les boucles C
+  vectorisées (SIMD) de NumPy battent notre boucle Go scalaire. C'est l'écart de
+  débit brut vectoriel, structurel.
 
 En résumé :
 
-- **Latence / petites opérations / orchestration** → avantage **Go** (pas
-  d'overhead d'interpréteur).
-- **Débit brut sur gros tableaux numériques** → avantage **NumPy** (vectorisation).
+- **Latence, orchestration, réductions, arithmétique alignée** → avantage **Go**.
+- **Débit vectoriel brut sur gros tableaux sans coordonnées** → avantage **NumPy**.
 
 ## Pistes d'amélioration côté Go
 
-- Vectorisation manuelle (déroulage, `//go:` intrinsics) ou usage de SIMD pour
-  `binaryOp` sur gros tableaux.
-- Réduire les allocations de `Add` : l'alignement sur coordonnées (copies via
-  `takeAlong`/`reindex`) domine encore les 135 allocations mesurées.
-- Chemin rapide « pas de coordonnées » pour éviter l'alignement quand inutile.
+- **`Broadcast`** reste le point faible : vectorisation manuelle (déroulage,
+  SIMD) de `binaryOp` pour rapprocher NumPy sur le calcul élément par élément à
+  grande taille.
+- Réduire encore les allocations de `Add` (18 restantes, essentiellement le
+  clonage des coordonnées du résultat).
+
+## Historique
+
+- **Sprint 10** : mise en place du comparatif ; chemin rapide « dimensions
+  identiques » dans `binaryOp` (`Add` 348 µs → 250 µs).
+- **Sprint 11** : l'alignement ne recopie plus les coordonnées déjà identiques
+  (`Add` 272 µs → 48 µs, 135 → 18 allocations) — Go passe devant NumPy sur `Add`.
 
 ## Reproduire
 
