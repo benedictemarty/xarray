@@ -56,6 +56,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-24 | En tant qu'utilisateur, je veux un moteur de calcul dense performant (`ndarray`). | P2 | ✅ Fait (S15-16) |
 | US-25 | En tant qu'utilisateur, je veux lire/écrire du Zarr (v2). | P1 | ✅ Fait (S24) |
 | US-26 | En tant qu'utilisateur, je veux de l'algèbre linéaire et du ML classique. | P2 | ✅ Fait (S22-23) |
+| US-27 | En tant qu'utilisateur, je veux lire du GRIB2 (grille lat/lon, simple packing). | P2 | ✅ Fait (S26, sous-ensemble) |
 
 ## Dette / transverse
 

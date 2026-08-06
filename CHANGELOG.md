@@ -7,6 +7,21 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 26 — Lecture GRIB2, sous-ensemble)
+
+- **`ReadGrib`** : lecture GRIB2 pour grille **régulière lat/lon** (`regular_ll`)
+  en **simple packing** (template 5.0), sans bitmap. `GribMessage.ToDataArray`
+  produit un `DataArray[float64]` (latitude, longitude) avec coordonnées.
+- Décodage signe-magnitude des facteurs d'échelle, lecteur de bits, formule
+  `Y = (R + X·2^E) / 10^D`.
+- **Validé contre ecCodes** : un vrai champ (201×131) réencodé en simple packing
+  et décodé par Go → 26 331 valeurs **identiques** (diff max = 0,0). Test unitaire
+  autonome sur message minimal. Utilitaire `cmd/readgrib`.
+- **Non géré (documenté)** : complex/second-order packing (fichiers opérationnels),
+  GRIB1, autres grilles, bitmaps → ecCodes/cfgrib requis. Voir `docs/GRIB.md`.
+- Correction : inversion `Di`/`Dj` dans le template de grille (révélée par le test
+  unitaire ; sans effet sur les grilles à pas égal).
+
 ## [0.5.0] — 2026-08-06
 
 Cinquième version : prise en charge du format **Zarr v2** (arrays et Datasets en
