@@ -7,6 +7,11 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.2.0] — 2026-08-06
+
+Deuxième version : jointures externes, optimisations de performance, et support
+d'un sous-ensemble du format netCDF classique.
+
 ### Ajouté (Sprint 8 — netCDF, US-16)
 
 - **Support d'un sous-ensemble du format netCDF classique (CDF-1)** :
