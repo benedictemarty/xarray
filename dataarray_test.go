@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func exempleDataArray(t *testing.T) *DataArray {
+func exempleDataArray(t *testing.T) *DataArray[float64] {
 	t.Helper()
 	da, err := NewDataArray(
 		[]string{"temps", "lieu"},
@@ -114,8 +114,13 @@ func TestDataArrayReductionsVide(t *testing.T) {
 	if !math.IsNaN(da.Mean()) {
 		t.Errorf("Mean d'un tableau vide devrait être NaN")
 	}
-	if !math.IsNaN(da.Min()) {
-		t.Errorf("Min d'un tableau vide devrait être NaN")
+	// Pour les types génériques, Min/Max d'un tableau vide renvoient la
+	// zéro-valeur du type (pas de NaN universel).
+	if da.Min() != 0 {
+		t.Errorf("Min d'un tableau vide devrait être 0, obtenu %v", da.Min())
+	}
+	if da.Max() != 0 {
+		t.Errorf("Max d'un tableau vide devrait être 0, obtenu %v", da.Max())
 	}
 }
 

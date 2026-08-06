@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func exempleDataset(t *testing.T) *Dataset {
+func exempleDataset(t *testing.T) *Dataset[float64] {
 	t.Helper()
 	// Deux variables partageant la dimension "temps" (coord 2020,2021).
 	temp, _ := NewDataArray([]string{"temps", "lieu"}, []int{2, 3},
@@ -15,7 +15,7 @@ func exempleDataset(t *testing.T) *Dataset {
 		[]float64{100, 200},
 		map[string][]float64{"temps": {2020, 2021}}, "pluie")
 
-	ds, err := NewDataset(map[string]*DataArray{"temperature": temp, "pluie": pluie})
+	ds, err := NewDataset(map[string]*DataArray[float64]{"temperature": temp, "pluie": pluie})
 	if err != nil {
 		t.Fatalf("NewDataset : %v", err)
 	}
@@ -40,7 +40,7 @@ func TestNewDatasetIncoherent(t *testing.T) {
 	// Même dimension "temps" mais tailles différentes -> erreur.
 	a, _ := NewDataArray([]string{"temps"}, []int{2}, []float64{1, 2}, nil, "a")
 	b, _ := NewDataArray([]string{"temps"}, []int{3}, []float64{1, 2, 3}, nil, "b")
-	if _, err := NewDataset(map[string]*DataArray{"a": a, "b": b}); err == nil {
+	if _, err := NewDataset(map[string]*DataArray[float64]{"a": a, "b": b}); err == nil {
 		t.Error("erreur attendue : dimension temps de tailles incohérentes")
 	}
 
@@ -49,7 +49,7 @@ func TestNewDatasetIncoherent(t *testing.T) {
 		map[string][]float64{"temps": {2020, 2021}}, "c")
 	d, _ := NewDataArray([]string{"temps"}, []int{2}, []float64{1, 2},
 		map[string][]float64{"temps": {1999, 2000}}, "d")
-	if _, err := NewDataset(map[string]*DataArray{"c": c, "d": d}); err == nil {
+	if _, err := NewDataset(map[string]*DataArray[float64]{"c": c, "d": d}); err == nil {
 		t.Error("erreur attendue : coordonnées temps incohérentes")
 	}
 }
@@ -146,7 +146,7 @@ func TestDatasetMerge(t *testing.T) {
 	ds := exempleDataset(t)
 	autre, _ := NewDataArray([]string{"temps"}, []int{2}, []float64{9, 9},
 		map[string][]float64{"temps": {2020, 2021}}, "humidite")
-	dsB, _ := NewDataset(map[string]*DataArray{"humidite": autre})
+	dsB, _ := NewDataset(map[string]*DataArray[float64]{"humidite": autre})
 	m, err := ds.Merge(dsB)
 	if err != nil {
 		t.Fatalf("Merge : %v", err)

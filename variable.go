@@ -7,8 +7,8 @@
 //   - DataArray : Variable + coordonnées étiquetées + nom (indexation par label) ;
 //   - Dataset   : collection de DataArrays partageant des dimensions et coordonnées.
 //
-// Pour ce premier incrément, les données sont stockées en float64 et
-// disposées en mémoire selon l'ordre C (row-major).
+// Les tableaux sont génériques sur un type numérique (contrainte Number) et
+// disposés en mémoire selon l'ordre C (row-major).
 package xarray
 
 import (
@@ -21,10 +21,10 @@ import (
 //
 // Les données sont stockées à plat en ordre C (row-major) : le dernier axe
 // varie le plus vite.
-type Variable struct {
+type Variable[T Number] struct {
 	dims  []string
 	shape []int
-	data  []float64
+	data  []T
 	attrs map[string]string
 }
 
@@ -36,7 +36,7 @@ type Variable struct {
 //   - les noms de dimensions sont non vides et uniques ;
 //   - les tailles sont positives ou nulles ;
 //   - len(data) == produit des tailles.
-func NewVariable(dims []string, shape []int, data []float64) (*Variable, error) {
+func NewVariable[T Number](dims []string, shape []int, data []T) (*Variable[T], error) {
 	if len(dims) != len(shape) {
 		return nil, fmt.Errorf("xarray: %d dimension(s) mais %d taille(s) de forme", len(dims), len(shape))
 	}
@@ -61,41 +61,31 @@ func NewVariable(dims []string, shape []int, data []float64) (*Variable, error) 
 		return nil, fmt.Errorf("xarray: %d valeur(s) fournie(s) pour une forme de taille %d", len(data), size)
 	}
 
-	dimsCopy := append([]string(nil), dims...)
-	shapeCopy := append([]int(nil), shape...)
-	dataCopy := append([]float64(nil), data...)
-
-	return &Variable{
-		dims:  dimsCopy,
-		shape: shapeCopy,
-		data:  dataCopy,
+	return &Variable[T]{
+		dims:  append([]string(nil), dims...),
+		shape: append([]int(nil), shape...),
+		data:  append([]T(nil), data...),
 		attrs: map[string]string{},
 	}, nil
 }
 
 // Dims renvoie une copie des noms de dimensions.
-func (v *Variable) Dims() []string { return append([]string(nil), v.dims...) }
+func (v *Variable[T]) Dims() []string { return append([]string(nil), v.dims...) }
 
 // Shape renvoie une copie de la forme (taille de chaque dimension).
-func (v *Variable) Shape() []int { return append([]int(nil), v.shape...) }
+func (v *Variable[T]) Shape() []int { return append([]int(nil), v.shape...) }
 
 // Ndim renvoie le nombre de dimensions.
-func (v *Variable) Ndim() int { return len(v.dims) }
+func (v *Variable[T]) Ndim() int { return len(v.dims) }
 
 // Size renvoie le nombre total d'éléments.
-func (v *Variable) Size() int {
-	size := 1
-	for _, s := range v.shape {
-		size *= s
-	}
-	return size
-}
+func (v *Variable[T]) Size() int { return product(v.shape) }
 
 // Data renvoie une copie des données plates (ordre C).
-func (v *Variable) Data() []float64 { return append([]float64(nil), v.data...) }
+func (v *Variable[T]) Data() []T { return append([]T(nil), v.data...) }
 
 // Attrs renvoie une copie des attributs (métadonnées libres).
-func (v *Variable) Attrs() map[string]string {
+func (v *Variable[T]) Attrs() map[string]string {
 	out := make(map[string]string, len(v.attrs))
 	for k, val := range v.attrs {
 		out[k] = val
@@ -104,7 +94,7 @@ func (v *Variable) Attrs() map[string]string {
 }
 
 // SetAttr définit un attribut (métadonnée) sur la variable.
-func (v *Variable) SetAttr(key, value string) {
+func (v *Variable[T]) SetAttr(key, value string) {
 	if v.attrs == nil {
 		v.attrs = map[string]string{}
 	}
@@ -112,7 +102,7 @@ func (v *Variable) SetAttr(key, value string) {
 }
 
 // dimIndex renvoie l'indice de l'axe portant le nom dim, ou -1 s'il est absent.
-func (v *Variable) dimIndex(dim string) int {
+func (v *Variable[T]) dimIndex(dim string) int {
 	for i, d := range v.dims {
 		if d == dim {
 			return i
@@ -122,7 +112,7 @@ func (v *Variable) dimIndex(dim string) int {
 }
 
 // strides calcule les pas (strides) en ordre C pour la forme courante.
-func (v *Variable) strides() []int {
+func (v *Variable[T]) strides() []int {
 	st := make([]int, len(v.shape))
 	acc := 1
 	for i := len(v.shape) - 1; i >= 0; i-- {
@@ -133,7 +123,7 @@ func (v *Variable) strides() []int {
 }
 
 // flatIndex convertit un multi-indice en indice plat (ordre C).
-func (v *Variable) flatIndex(idx []int) (int, error) {
+func (v *Variable[T]) flatIndex(idx []int) (int, error) {
 	if len(idx) != len(v.shape) {
 		return 0, fmt.Errorf("xarray: %d indice(s) fourni(s) pour un tableau à %d dimension(s)", len(idx), len(v.shape))
 	}
@@ -149,19 +139,18 @@ func (v *Variable) flatIndex(idx []int) (int, error) {
 }
 
 // At renvoie la valeur au multi-indice positionnel donné.
-func (v *Variable) At(idx ...int) (float64, error) {
+func (v *Variable[T]) At(idx ...int) (T, error) {
+	var zero T
 	flat, err := v.flatIndex(idx)
 	if err != nil {
-		return 0, err
+		return zero, err
 	}
 	return v.data[flat], nil
 }
 
 // Isel (integer select) sélectionne une position entière sur une dimension et
 // renvoie une nouvelle Variable dont cette dimension est supprimée.
-//
-// C'est l'équivalent bas niveau de DataArray.isel de xarray.
-func (v *Variable) Isel(dim string, index int) (*Variable, error) {
+func (v *Variable[T]) Isel(dim string, index int) (*Variable[T], error) {
 	axis := v.dimIndex(dim)
 	if axis == -1 {
 		return nil, fmt.Errorf("xarray: dimension %q absente", dim)
@@ -180,14 +169,8 @@ func (v *Variable) Isel(dim string, index int) (*Variable, error) {
 		newShape = append(newShape, v.shape[i])
 	}
 
-	newSize := 1
-	for _, s := range newShape {
-		newSize *= s
-	}
-	newData := make([]float64, 0, newSize)
-
+	newData := make([]T, 0, product(newShape))
 	st := v.strides()
-	// Parcours de toutes les positions de la sous-tranche.
 	counter := make([]int, len(newShape))
 	for done := false; !done; {
 		flat := index * st[axis]
@@ -201,7 +184,6 @@ func (v *Variable) Isel(dim string, index int) (*Variable, error) {
 		}
 		newData = append(newData, v.data[flat])
 
-		// Incrément du compteur multi-dimensionnel (ordre C).
 		if len(counter) == 0 {
 			done = true
 		}
@@ -217,18 +199,13 @@ func (v *Variable) Isel(dim string, index int) (*Variable, error) {
 		}
 	}
 
-	return &Variable{
-		dims:  newDims,
-		shape: newShape,
-		data:  newData,
-		attrs: v.Attrs(),
-	}, nil
+	return &Variable[T]{dims: newDims, shape: newShape, data: newData, attrs: v.Attrs()}, nil
 }
 
 // String fournit une représentation lisible de la variable.
-func (v *Variable) String() string {
+func (v *Variable[T]) String() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "<xarray.Variable (")
+	b.WriteString("<xarray.Variable (")
 	parts := make([]string, len(v.dims))
 	for i, d := range v.dims {
 		parts[i] = fmt.Sprintf("%s: %d", d, v.shape[i])

@@ -7,26 +7,31 @@ import (
 
 // --- Réducteurs de base sur une tranche -------------------------------------
 
-func sumSlice(s []float64) float64 {
-	var t float64
+func sumSliceG[T Number](s []T) T {
+	var t T
 	for _, x := range s {
 		t += x
 	}
 	return t
 }
 
-func meanSlice(s []float64) float64 {
+func meanSliceG[T Number](s []T) float64 {
 	if len(s) == 0 {
 		return math.NaN()
 	}
-	return sumSlice(s) / float64(len(s))
+	var t float64
+	for _, x := range s {
+		t += float64(x)
+	}
+	return t / float64(len(s))
 }
 
-func minSlice(s []float64) float64 {
+func minSliceG[T Number](s []T) T {
+	var m T
 	if len(s) == 0 {
-		return math.NaN()
+		return m
 	}
-	m := s[0]
+	m = s[0]
 	for _, x := range s[1:] {
 		if x < m {
 			m = x
@@ -35,11 +40,12 @@ func minSlice(s []float64) float64 {
 	return m
 }
 
-func maxSlice(s []float64) float64 {
+func maxSliceG[T Number](s []T) T {
+	var m T
 	if len(s) == 0 {
-		return math.NaN()
+		return m
 	}
-	m := s[0]
+	m = s[0]
 	for _, x := range s[1:] {
 		if x > m {
 			m = x
@@ -48,20 +54,23 @@ func maxSlice(s []float64) float64 {
 	return m
 }
 
+// convertNum convertit une valeur numérique d'un type vers un autre, via float64.
+// Une perte de précision est possible pour les très grands entiers (documenté).
+func convertNum[T, R Number](x T) R { return R(float64(x)) }
+
 // --- Transpose --------------------------------------------------------------
 
 // Transpose réordonne les dimensions du DataArray selon newDims (permutation).
-// Les coordonnées sont conservées.
-func (da *DataArray) Transpose(newDims ...string) (*DataArray, error) {
+func (da *DataArray[T]) Transpose(newDims ...string) (*DataArray[T], error) {
 	nv, err := da.variable.Transpose(newDims...)
 	if err != nil {
 		return nil, err
 	}
-	return &DataArray{variable: nv, coords: da.cloneCoords(), name: da.name}, nil
+	return &DataArray[T]{variable: nv, coords: da.cloneCoords(), name: da.name}, nil
 }
 
-func (da *DataArray) cloneCoords() map[string]*Variable {
-	coords := make(map[string]*Variable, len(da.coords))
+func (da *DataArray[T]) cloneCoords() map[string]*Variable[T] {
+	coords := make(map[string]*Variable[T], len(da.coords))
 	for k, cv := range da.coords {
 		nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
 		coords[k] = nc
@@ -71,64 +80,68 @@ func (da *DataArray) cloneCoords() map[string]*Variable {
 
 // --- Réductions par axe -----------------------------------------------------
 
-// reduceAxis applique un réducteur le long d'une dimension et retire sa
-// coordonnée éventuelle du résultat.
-func (da *DataArray) reduceAxis(dim string, reducer func([]float64) float64) (*DataArray, error) {
-	nv, err := da.variable.reduceAxis(dim, reducer)
+// reduceAxisDA réduit la dimension dim et retire sa coordonnée. Le type de
+// sortie R peut différer de T (ex. moyenne d'entiers -> float64) ; les
+// coordonnées restantes sont converties de T vers R.
+func reduceAxisDA[T, R Number](da *DataArray[T], dim string, reducer func([]T) R) (*DataArray[R], error) {
+	nv, err := reduceAxisVar(da.variable, dim, reducer)
 	if err != nil {
 		return nil, err
 	}
-	coords := make(map[string]*Variable, len(da.coords))
+	coords := make(map[string]*Variable[R], len(da.coords))
 	for k, cv := range da.coords {
 		if k == dim {
 			continue
 		}
-		nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+		labels := make([]R, len(cv.data))
+		for i, x := range cv.data {
+			labels[i] = convertNum[T, R](x)
+		}
+		nc, _ := NewVariable(cv.Dims(), cv.Shape(), labels)
 		coords[k] = nc
 	}
-	return &DataArray{variable: nv, coords: coords, name: da.name}, nil
+	return &DataArray[R]{variable: nv, coords: coords, name: da.name}, nil
 }
 
 // SumAxis réduit la dimension dim par somme.
-func (da *DataArray) SumAxis(dim string) (*DataArray, error) {
-	return da.reduceAxis(dim, sumSlice)
+func (da *DataArray[T]) SumAxis(dim string) (*DataArray[T], error) {
+	return reduceAxisDA[T, T](da, dim, sumSliceG[T])
 }
 
-// MeanAxis réduit la dimension dim par moyenne.
-func (da *DataArray) MeanAxis(dim string) (*DataArray, error) {
-	return da.reduceAxis(dim, meanSlice)
+// MeanAxis réduit la dimension dim par moyenne (résultat en float64).
+func (da *DataArray[T]) MeanAxis(dim string) (*DataArray[float64], error) {
+	return reduceAxisDA[T, float64](da, dim, meanSliceG[T])
 }
 
 // MinAxis réduit la dimension dim par minimum.
-func (da *DataArray) MinAxis(dim string) (*DataArray, error) {
-	return da.reduceAxis(dim, minSlice)
+func (da *DataArray[T]) MinAxis(dim string) (*DataArray[T], error) {
+	return reduceAxisDA[T, T](da, dim, minSliceG[T])
 }
 
 // MaxAxis réduit la dimension dim par maximum.
-func (da *DataArray) MaxAxis(dim string) (*DataArray, error) {
-	return da.reduceAxis(dim, maxSlice)
+func (da *DataArray[T]) MaxAxis(dim string) (*DataArray[T], error) {
+	return reduceAxisDA[T, T](da, dim, maxSliceG[T])
 }
 
 // --- Alignement -------------------------------------------------------------
 
 // align aligne deux DataArrays sur leurs dimensions communes disposant de
-// coordonnées des deux côtés : seules les étiquettes présentes dans les deux
-// (jointure interne) sont conservées, dans l'ordre du premier opérande.
-func align(a, b *DataArray) (*DataArray, *DataArray, error) {
+// coordonnées des deux côtés : seules les étiquettes communes (jointure interne)
+// sont conservées, dans l'ordre du premier opérande.
+func align[T Number](a, b *DataArray[T]) (*DataArray[T], *DataArray[T], error) {
 	a2, b2 := a, b
 	for _, dim := range a.variable.dims {
 		ca, okA := a2.coords[dim]
 		cb, okB := b2.coords[dim]
 		if !okA || !okB {
-			continue // pas de coordonnées des deux côtés : pas d'alignement
+			continue
 		}
-		// Positions communes.
-		posB := make(map[float64]int, len(cb.data))
+		posB := make(map[T]int, len(cb.data))
 		for i, l := range cb.data {
 			posB[l] = i
 		}
 		var idxA, idxB []int
-		var labels []float64
+		var labels []T
 		for i, l := range ca.data {
 			if j, ok := posB[l]; ok {
 				idxA = append(idxA, i)
@@ -154,12 +167,12 @@ func align(a, b *DataArray) (*DataArray, *DataArray, error) {
 
 // takeAlong sélectionne plusieurs positions le long de dim en conservant la
 // dimension et en réindexant sa coordonnée.
-func (da *DataArray) takeAlong(dim string, indices []int) (*DataArray, error) {
+func (da *DataArray[T]) takeAlong(dim string, indices []int) (*DataArray[T], error) {
 	nv, err := da.variable.take(dim, indices)
 	if err != nil {
 		return nil, err
 	}
-	coords := make(map[string]*Variable, len(da.coords))
+	coords := make(map[string]*Variable[T], len(da.coords))
 	for k, cv := range da.coords {
 		if k == dim {
 			nc, err := cv.take(dim, indices)
@@ -172,15 +185,14 @@ func (da *DataArray) takeAlong(dim string, indices []int) (*DataArray, error) {
 		nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
 		coords[k] = nc
 	}
-	return &DataArray{variable: nv, coords: coords, name: da.name}, nil
+	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, nil
 }
 
 // --- Arithmétique -----------------------------------------------------------
 
 // binary applique une opération binaire élément par élément entre deux
-// DataArrays, avec alignement automatique sur les coordonnées puis broadcasting
-// par nom de dimension.
-func (da *DataArray) binary(other *DataArray, fn func(x, y float64) float64) (*DataArray, error) {
+// DataArrays, avec alignement automatique puis broadcasting par nom.
+func (da *DataArray[T]) binary(other *DataArray[T], fn func(x, y T) T) (*DataArray[T], error) {
 	a, b, err := align(da, other)
 	if err != nil {
 		return nil, err
@@ -189,8 +201,7 @@ func (da *DataArray) binary(other *DataArray, fn func(x, y float64) float64) (*D
 	if err != nil {
 		return nil, err
 	}
-	// Coordonnées du résultat : celles de a en priorité, complétées par b.
-	coords := make(map[string]*Variable, len(nv.dims))
+	coords := make(map[string]*Variable[T], len(nv.dims))
 	for _, dim := range nv.dims {
 		if cv, ok := a.coords[dim]; ok {
 			nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
@@ -200,43 +211,43 @@ func (da *DataArray) binary(other *DataArray, fn func(x, y float64) float64) (*D
 			coords[dim] = nc
 		}
 	}
-	return &DataArray{variable: nv, coords: coords, name: da.name}, nil
+	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, nil
 }
 
 // Add renvoie da + other (avec alignement et broadcasting).
-func (da *DataArray) Add(other *DataArray) (*DataArray, error) {
-	return da.binary(other, func(x, y float64) float64 { return x + y })
+func (da *DataArray[T]) Add(other *DataArray[T]) (*DataArray[T], error) {
+	return da.binary(other, func(x, y T) T { return x + y })
 }
 
 // Sub renvoie da - other.
-func (da *DataArray) Sub(other *DataArray) (*DataArray, error) {
-	return da.binary(other, func(x, y float64) float64 { return x - y })
+func (da *DataArray[T]) Sub(other *DataArray[T]) (*DataArray[T], error) {
+	return da.binary(other, func(x, y T) T { return x - y })
 }
 
 // Mul renvoie da * other.
-func (da *DataArray) Mul(other *DataArray) (*DataArray, error) {
-	return da.binary(other, func(x, y float64) float64 { return x * y })
+func (da *DataArray[T]) Mul(other *DataArray[T]) (*DataArray[T], error) {
+	return da.binary(other, func(x, y T) T { return x * y })
 }
 
 // Div renvoie da / other.
-func (da *DataArray) Div(other *DataArray) (*DataArray, error) {
-	return da.binary(other, func(x, y float64) float64 { return x / y })
+func (da *DataArray[T]) Div(other *DataArray[T]) (*DataArray[T], error) {
+	return da.binary(other, func(x, y T) T { return x / y })
 }
 
 // --- Opérations scalaires ---------------------------------------------------
 
 // AddScalar ajoute s à chaque élément.
-func (da *DataArray) AddScalar(s float64) *DataArray {
-	return da.mapScalar(func(x float64) float64 { return x + s })
+func (da *DataArray[T]) AddScalar(s T) *DataArray[T] {
+	return da.mapScalar(func(x T) T { return x + s })
 }
 
 // MulScalar multiplie chaque élément par s.
-func (da *DataArray) MulScalar(s float64) *DataArray {
-	return da.mapScalar(func(x float64) float64 { return x * s })
+func (da *DataArray[T]) MulScalar(s T) *DataArray[T] {
+	return da.mapScalar(func(x T) T { return x * s })
 }
 
 // mapScalar applique fn à chaque élément en conservant dimensions et coordonnées.
-func (da *DataArray) mapScalar(fn func(float64) float64) *DataArray {
+func (da *DataArray[T]) mapScalar(fn func(T) T) *DataArray[T] {
 	nv := da.variable.mapScalar(fn)
-	return &DataArray{variable: nv, coords: da.cloneCoords(), name: da.name}
+	return &DataArray[T]{variable: nv, coords: da.cloneCoords(), name: da.name}
 }

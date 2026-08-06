@@ -2,7 +2,6 @@ package xarray
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 )
@@ -12,13 +11,12 @@ import (
 //
 // Les coordonnées permettent l'indexation par label (Sel) en plus de
 // l'indexation par position (Isel).
-type DataArray struct {
-	variable *Variable
-	// coords associe un nom de coordonnée à une Variable 1D. Pour ce premier
-	// incrément, seules les coordonnées dites « de dimension » sont gérées :
-	// leur nom est celui d'une dimension et leur longueur correspond à la
-	// taille de cette dimension.
-	coords map[string]*Variable
+type DataArray[T Number] struct {
+	variable *Variable[T]
+	// coords associe un nom de coordonnée à une Variable 1D. Seules les
+	// coordonnées dites « de dimension » sont gérées : leur nom est celui d'une
+	// dimension et leur longueur correspond à la taille de cette dimension.
+	coords map[string]*Variable[T]
 	name   string
 }
 
@@ -28,13 +26,13 @@ type DataArray struct {
 //   - coords associe optionnellement à certaines dimensions un vecteur d'étiquettes
 //     de même longueur que la dimension ;
 //   - name est le nom (optionnel) du tableau.
-func NewDataArray(dims []string, shape []int, data []float64, coords map[string][]float64, name string) (*DataArray, error) {
+func NewDataArray[T Number](dims []string, shape []int, data []T, coords map[string][]T, name string) (*DataArray[T], error) {
 	v, err := NewVariable(dims, shape, data)
 	if err != nil {
 		return nil, err
 	}
 
-	coordVars := make(map[string]*Variable, len(coords))
+	coordVars := make(map[string]*Variable[T], len(coords))
 	for dim, labels := range coords {
 		axis := v.dimIndex(dim)
 		if axis == -1 {
@@ -50,43 +48,42 @@ func NewDataArray(dims []string, shape []int, data []float64, coords map[string]
 		coordVars[dim] = cv
 	}
 
-	return &DataArray{variable: v, coords: coordVars, name: name}, nil
+	return &DataArray[T]{variable: v, coords: coordVars, name: name}, nil
 }
 
 // Name renvoie le nom du tableau.
-func (da *DataArray) Name() string { return da.name }
+func (da *DataArray[T]) Name() string { return da.name }
 
 // Rename renvoie une copie du tableau portant le nom fourni.
-func (da *DataArray) Rename(name string) *DataArray {
+func (da *DataArray[T]) Rename(name string) *DataArray[T] {
 	c := da.clone()
 	c.name = name
 	return c
 }
 
 // Dims renvoie les noms de dimensions.
-func (da *DataArray) Dims() []string { return da.variable.Dims() }
+func (da *DataArray[T]) Dims() []string { return da.variable.Dims() }
 
 // HasDim indique si le tableau possède la dimension dim.
-func (da *DataArray) HasDim(dim string) bool { return da.variable.dimIndex(dim) != -1 }
+func (da *DataArray[T]) HasDim(dim string) bool { return da.variable.dimIndex(dim) != -1 }
 
 // Shape renvoie la forme du tableau.
-func (da *DataArray) Shape() []int { return da.variable.Shape() }
+func (da *DataArray[T]) Shape() []int { return da.variable.Shape() }
 
 // Ndim renvoie le nombre de dimensions.
-func (da *DataArray) Ndim() int { return da.variable.Ndim() }
+func (da *DataArray[T]) Ndim() int { return da.variable.Ndim() }
 
 // Size renvoie le nombre total d'éléments.
-func (da *DataArray) Size() int { return da.variable.Size() }
+func (da *DataArray[T]) Size() int { return da.variable.Size() }
 
 // Data renvoie une copie des données plates (ordre C).
-func (da *DataArray) Data() []float64 { return da.variable.Data() }
+func (da *DataArray[T]) Data() []T { return da.variable.Data() }
 
 // Variable renvoie la Variable sous-jacente.
-func (da *DataArray) Variable() *Variable { return da.variable }
+func (da *DataArray[T]) Variable() *Variable[T] { return da.variable }
 
-// Coord renvoie les étiquettes de la coordonnée associée à dim, ou une erreur
-// si aucune coordonnée n'est définie.
-func (da *DataArray) Coord(dim string) ([]float64, error) {
+// Coord renvoie les étiquettes de la coordonnée associée à dim.
+func (da *DataArray[T]) Coord(dim string) ([]T, error) {
 	cv, ok := da.coords[dim]
 	if !ok {
 		return nil, fmt.Errorf("xarray: aucune coordonnée pour la dimension %q", dim)
@@ -95,37 +92,37 @@ func (da *DataArray) Coord(dim string) ([]float64, error) {
 }
 
 // clone effectue une copie profonde du DataArray.
-func (da *DataArray) clone() *DataArray {
-	coords := make(map[string]*Variable, len(da.coords))
+func (da *DataArray[T]) clone() *DataArray[T] {
+	coords := make(map[string]*Variable[T], len(da.coords))
 	for k, cv := range da.coords {
 		nv, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
 		coords[k] = nv
 	}
 	nv, _ := NewVariable(da.variable.Dims(), da.variable.Shape(), da.variable.Data())
-	return &DataArray{variable: nv, coords: coords, name: da.name}
+	return &DataArray[T]{variable: nv, coords: coords, name: da.name}
 }
 
 // Isel sélectionne par position entière le long d'une dimension. La dimension
 // est supprimée du résultat, ainsi que sa coordonnée éventuelle.
-func (da *DataArray) Isel(dim string, index int) (*DataArray, error) {
+func (da *DataArray[T]) Isel(dim string, index int) (*DataArray[T], error) {
 	nv, err := da.variable.Isel(dim, index)
 	if err != nil {
 		return nil, err
 	}
-	coords := make(map[string]*Variable, len(da.coords))
+	coords := make(map[string]*Variable[T], len(da.coords))
 	for k, cv := range da.coords {
 		if k == dim {
-			continue // la coordonnée de la dimension réduite disparaît
+			continue
 		}
 		ncv, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
 		coords[k] = ncv
 	}
-	return &DataArray{variable: nv, coords: coords, name: da.name}, nil
+	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, nil
 }
 
 // Sel sélectionne par label le long d'une dimension : l'étiquette est recherchée
 // dans la coordonnée de la dimension, puis Isel est appliqué à sa position.
-func (da *DataArray) Sel(dim string, label float64) (*DataArray, error) {
+func (da *DataArray[T]) Sel(dim string, label T) (*DataArray[T], error) {
 	cv, ok := da.coords[dim]
 	if !ok {
 		return nil, fmt.Errorf("xarray: indexation par label impossible : aucune coordonnée pour la dimension %q", dim)
@@ -143,58 +140,22 @@ func (da *DataArray) Sel(dim string, label float64) (*DataArray, error) {
 	return da.Isel(dim, pos)
 }
 
-// --- Réductions ---------------------------------------------------------
+// --- Réductions globales ----------------------------------------------------
 
 // Sum renvoie la somme de tous les éléments.
-func (da *DataArray) Sum() float64 {
-	var s float64
-	for _, x := range da.variable.data {
-		s += x
-	}
-	return s
-}
+func (da *DataArray[T]) Sum() T { return sumSliceG(da.variable.data) }
 
-// Mean renvoie la moyenne de tous les éléments. Renvoie NaN pour un tableau vide.
-func (da *DataArray) Mean() float64 {
-	n := len(da.variable.data)
-	if n == 0 {
-		return math.NaN()
-	}
-	return da.Sum() / float64(n)
-}
+// Mean renvoie la moyenne de tous les éléments (en float64). NaN si vide.
+func (da *DataArray[T]) Mean() float64 { return meanSliceG(da.variable.data) }
 
-// Min renvoie le minimum de tous les éléments. Renvoie NaN pour un tableau vide.
-func (da *DataArray) Min() float64 {
-	d := da.variable.data
-	if len(d) == 0 {
-		return math.NaN()
-	}
-	m := d[0]
-	for _, x := range d[1:] {
-		if x < m {
-			m = x
-		}
-	}
-	return m
-}
+// Min renvoie le minimum de tous les éléments. Zéro-valeur de T si vide.
+func (da *DataArray[T]) Min() T { return minSliceG(da.variable.data) }
 
-// Max renvoie le maximum de tous les éléments. Renvoie NaN pour un tableau vide.
-func (da *DataArray) Max() float64 {
-	d := da.variable.data
-	if len(d) == 0 {
-		return math.NaN()
-	}
-	m := d[0]
-	for _, x := range d[1:] {
-		if x > m {
-			m = x
-		}
-	}
-	return m
-}
+// Max renvoie le maximum de tous les éléments. Zéro-valeur de T si vide.
+func (da *DataArray[T]) Max() T { return maxSliceG(da.variable.data) }
 
 // String fournit une représentation lisible du DataArray.
-func (da *DataArray) String() string {
+func (da *DataArray[T]) String() string {
 	var b strings.Builder
 	name := da.name
 	if name == "" {

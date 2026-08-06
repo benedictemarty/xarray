@@ -8,7 +8,8 @@ L'idée : manipuler des tableaux multi-dimensionnels dont les axes portent un
 étiquettes réelles), afin d'indexer par label plutôt que par position numérique.
 
 > ⚠️ Projet en cours de construction, livré **par incréments** en méthode agile.
-> Pour ce premier incrément, les données sont stockées en `float64`.
+> Les tableaux sont **génériques** sur un type numérique (`int`, `uint`,
+> `float32`, `float64`… via la contrainte `Number`).
 
 ## Installation
 
@@ -70,6 +71,11 @@ Voir [`docs/agile/ROADMAP.md`](docs/agile/ROADMAP.md) et le
 - **Sprint 2** — Opérations : broadcasting, alignement, arithmétique, réductions par axe ✅
 - **Sprint 3** — `Dataset` (regroupement, `sel`/`isel` et réductions propagés, fusion) ✅
 - **Sprint 4** — Entrées/sorties : JSON et CSV (aller-retour) ✅ — netCDF reporté
+- **Sprint 5** — Généralisation des types (generics `int`/`float32`/`float64`…) ✅
+
+> Note generics : les constructeurs infèrent le type depuis les données.
+> Les fonctions de lecture demandent un paramètre de type explicite, ex.
+> `xarray.ReadDataArrayCSV[float64](r)`.
 
 ## Entrées / sorties
 

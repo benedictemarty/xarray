@@ -15,7 +15,7 @@ func TestJSONDataArrayAllerRetour(t *testing.T) {
 	if err := da.WriteJSON(&buf); err != nil {
 		t.Fatalf("WriteJSON : %v", err)
 	}
-	got, err := ReadDataArrayJSON(&buf)
+	got, err := ReadDataArrayJSON[float64](&buf)
 	if err != nil {
 		t.Fatalf("ReadDataArrayJSON : %v", err)
 	}
@@ -40,13 +40,13 @@ func TestJSONDatasetAllerRetour(t *testing.T) {
 		map[string][]float64{"temps": {2020, 2021}, "lieu": {10, 20, 30}}, "temperature")
 	pluie, _ := NewDataArray([]string{"temps"}, []int{2}, []float64{100, 200},
 		map[string][]float64{"temps": {2020, 2021}}, "pluie")
-	ds, _ := NewDataset(map[string]*DataArray{"temperature": temp, "pluie": pluie})
+	ds, _ := NewDataset(map[string]*DataArray[float64]{"temperature": temp, "pluie": pluie})
 
 	var buf bytes.Buffer
 	if err := ds.WriteJSON(&buf); err != nil {
 		t.Fatalf("WriteJSON : %v", err)
 	}
-	got, err := ReadDatasetJSON(&buf)
+	got, err := ReadDatasetJSON[float64](&buf)
 	if err != nil {
 		t.Fatalf("ReadDatasetJSON : %v", err)
 	}
@@ -71,7 +71,7 @@ func TestCSVDataArrayAllerRetour(t *testing.T) {
 	if err := da.WriteCSV(&buf); err != nil {
 		t.Fatalf("WriteCSV : %v", err)
 	}
-	got, err := ReadDataArrayCSV(&buf)
+	got, err := ReadDataArrayCSV[float64](&buf)
 	if err != nil {
 		t.Fatalf("ReadDataArrayCSV : %v", err)
 	}
@@ -109,7 +109,7 @@ func TestCSVSansCoord(t *testing.T) {
 	da, _ := NewDataArray([]string{"x"}, []int{3}, []float64{7, 8, 9}, nil, "")
 	var buf bytes.Buffer
 	_ = da.WriteCSV(&buf)
-	got, err := ReadDataArrayCSV(&buf)
+	got, err := ReadDataArrayCSV[float64](&buf)
 	if err != nil {
 		t.Fatalf("ReadDataArrayCSV : %v", err)
 	}
@@ -123,14 +123,14 @@ func TestCSVSansCoord(t *testing.T) {
 }
 
 func TestCSVErreurs(t *testing.T) {
-	if _, err := ReadDataArrayCSV(bytes.NewBufferString("")); err == nil {
+	if _, err := ReadDataArrayCSV[float64](bytes.NewBufferString("")); err == nil {
 		t.Error("erreur attendue : CSV vide")
 	}
-	if _, err := ReadDataArrayCSV(bytes.NewBufferString("x\n1\n")); err == nil {
+	if _, err := ReadDataArrayCSV[float64](bytes.NewBufferString("x\n1\n")); err == nil {
 		t.Error("erreur attendue : en-tête à une seule colonne")
 	}
 	// Grille incomplète : coord x a deux valeurs mais une seule ligne.
-	if _, err := ReadDataArrayCSV(bytes.NewBufferString("x,y,v\n0,0,1\n0,1,2\n1,0,3\n")); err == nil {
+	if _, err := ReadDataArrayCSV[float64](bytes.NewBufferString("x,y,v\n0,0,1\n0,1,2\n1,0,3\n")); err == nil {
 		t.Error("erreur attendue : grille incomplète")
 	}
 }

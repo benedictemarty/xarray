@@ -4,11 +4,10 @@ import "fmt"
 
 // Transpose renvoie une nouvelle Variable dont les axes sont réordonnés selon
 // newDims. newDims doit être une permutation des dimensions courantes.
-func (v *Variable) Transpose(newDims ...string) (*Variable, error) {
+func (v *Variable[T]) Transpose(newDims ...string) (*Variable[T], error) {
 	if len(newDims) != len(v.dims) {
 		return nil, fmt.Errorf("xarray: transpose attend %d dimension(s), %d fournie(s)", len(v.dims), len(newDims))
 	}
-	// perm[i] = ancien axe placé en position i.
 	perm := make([]int, len(newDims))
 	for i, d := range newDims {
 		ax := v.dimIndex(d)
@@ -17,7 +16,6 @@ func (v *Variable) Transpose(newDims ...string) (*Variable, error) {
 		}
 		perm[i] = ax
 	}
-	// Vérifie que c'est bien une permutation (pas de doublon).
 	seen := make(map[int]struct{}, len(perm))
 	for _, p := range perm {
 		if _, ok := seen[p]; ok {
@@ -32,22 +30,20 @@ func (v *Variable) Transpose(newDims ...string) (*Variable, error) {
 	}
 	oldStrides := v.strides()
 
-	out := &Variable{
+	out := &Variable[T]{
 		dims:  append([]string(nil), newDims...),
 		shape: newShape,
-		data:  make([]float64, v.Size()),
+		data:  make([]T, v.Size()),
 		attrs: v.Attrs(),
 	}
-	// Pour chaque position de sortie, retrouver la position source.
+
 	counter := make([]int, len(newShape))
 	for flatOut := range out.data {
-		// counter est le multi-indice de sortie.
 		flatIn := 0
 		for i, c := range counter {
 			flatIn += c * oldStrides[perm[i]]
 		}
 		out.data[flatOut] = v.data[flatIn]
-		// Incrément du compteur (ordre C).
 		for k := len(counter) - 1; k >= 0; k-- {
 			counter[k]++
 			if counter[k] < newShape[k] {
@@ -60,9 +56,8 @@ func (v *Variable) Transpose(newDims ...string) (*Variable, error) {
 }
 
 // take sélectionne plusieurs positions le long de l'axe correspondant à dim,
-// sans supprimer la dimension (contrairement à Isel). L'ordre des indices est
-// conservé.
-func (v *Variable) take(dim string, indices []int) (*Variable, error) {
+// sans supprimer la dimension (contrairement à Isel). L'ordre est conservé.
+func (v *Variable[T]) take(dim string, indices []int) (*Variable[T], error) {
 	axis := v.dimIndex(dim)
 	if axis == -1 {
 		return nil, fmt.Errorf("xarray: dimension %q absente", dim)
@@ -75,10 +70,10 @@ func (v *Variable) take(dim string, indices []int) (*Variable, error) {
 	newShape := append([]int(nil), v.shape...)
 	newShape[axis] = len(indices)
 
-	out := &Variable{
+	out := &Variable[T]{
 		dims:  v.Dims(),
 		shape: newShape,
-		data:  make([]float64, product(newShape)),
+		data:  make([]T, product(newShape)),
 		attrs: v.Attrs(),
 	}
 	oldStrides := v.strides()
@@ -105,9 +100,25 @@ func (v *Variable) take(dim string, indices []int) (*Variable, error) {
 	return out, nil
 }
 
-// reduceAxis réduit la dimension dim en appliquant reducer sur chaque vecteur
-// le long de cet axe. La dimension disparaît du résultat.
-func (v *Variable) reduceAxis(dim string, reducer func([]float64) float64) (*Variable, error) {
+// mapScalar applique fn(x) à chaque élément et renvoie une nouvelle Variable.
+func (v *Variable[T]) mapScalar(fn func(T) T) *Variable[T] {
+	out := &Variable[T]{
+		dims:  v.Dims(),
+		shape: v.Shape(),
+		data:  make([]T, len(v.data)),
+		attrs: v.Attrs(),
+	}
+	for i, x := range v.data {
+		out.data[i] = fn(x)
+	}
+	return out
+}
+
+// reduceAxisVar réduit la dimension dim en appliquant reducer sur chaque vecteur
+// le long de cet axe. Le type de sortie R peut différer du type d'entrée T
+// (ex. moyenne d'entiers -> float64). C'est une fonction libre car une méthode
+// Go ne peut pas introduire de paramètre de type supplémentaire.
+func reduceAxisVar[T, R Number](v *Variable[T], dim string, reducer func([]T) R) (*Variable[R], error) {
 	axis := v.dimIndex(dim)
 	if axis == -1 {
 		return nil, fmt.Errorf("xarray: dimension %q absente", dim)
@@ -122,20 +133,18 @@ func (v *Variable) reduceAxis(dim string, reducer func([]float64) float64) (*Var
 		newShape = append(newShape, v.shape[i])
 	}
 
-	out := &Variable{
+	out := &Variable[R]{
 		dims:  newDims,
 		shape: newShape,
-		data:  make([]float64, product(newShape)),
+		data:  make([]R, product(newShape)),
 		attrs: v.Attrs(),
 	}
 	oldStrides := v.strides()
 	n := v.shape[axis]
 
-	// counter parcourt l'espace de sortie (dimensions sans l'axe réduit).
 	counter := make([]int, len(newShape))
-	buf := make([]float64, n)
+	buf := make([]T, n)
 	for flatOut := range out.data {
-		// Base : position dans le tableau source avec l'axe réduit à 0.
 		base := 0
 		j := 0
 		for i := range v.dims {
@@ -167,8 +176,7 @@ func (v *Variable) reduceAxis(dim string, reducer func([]float64) float64) (*Var
 //
 // L'ordre des dimensions du résultat est : celles de a, puis celles de b
 // absentes de a.
-func binaryOp(a, b *Variable, fn func(x, y float64) float64) (*Variable, error) {
-	// Construction des dimensions et tailles du résultat.
+func binaryOp[T Number](a, b *Variable[T], fn func(x, y T) T) (*Variable[T], error) {
 	resDims := append([]string(nil), a.dims...)
 	sizeByDim := make(map[string]int, len(a.dims)+len(b.dims))
 	for i, d := range a.dims {
@@ -189,10 +197,10 @@ func binaryOp(a, b *Variable, fn func(x, y float64) float64) (*Variable, error) 
 		resShape[i] = sizeByDim[d]
 	}
 
-	out := &Variable{
+	out := &Variable[T]{
 		dims:  resDims,
 		shape: resShape,
-		data:  make([]float64, product(resShape)),
+		data:  make([]T, product(resShape)),
 		attrs: map[string]string{},
 	}
 
@@ -223,22 +231,8 @@ func binaryOp(a, b *Variable, fn func(x, y float64) float64) (*Variable, error) 
 	return out, nil
 }
 
-// mapScalar applique fn(x) à chaque élément et renvoie une nouvelle Variable.
-func (v *Variable) mapScalar(fn func(float64) float64) *Variable {
-	out := &Variable{
-		dims:  v.Dims(),
-		shape: v.Shape(),
-		data:  make([]float64, len(v.data)),
-		attrs: v.Attrs(),
-	}
-	for i, x := range v.data {
-		out.data[i] = fn(x)
-	}
-	return out
-}
-
 // strideByDim associe à chaque nom de dimension son stride (ordre C).
-func strideByDim(v *Variable) map[string]int {
+func strideByDim[T Number](v *Variable[T]) map[string]int {
 	st := v.strides()
 	m := make(map[string]int, len(v.dims))
 	for i, d := range v.dims {

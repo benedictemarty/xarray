@@ -7,6 +7,24 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Modifié (Sprint 5 — Généralisation des types / dette T-01)
+
+- **BREAKING** : `Variable`, `DataArray` et `Dataset` sont désormais **génériques**
+  sur un type numérique (nouvelle contrainte `Number` : int/uint/float). Les
+  constructeurs infèrent le type depuis les données (`NewDataArray(dims, shape,
+  []int{…}, …)` donne un `DataArray[int]`).
+  - Les fonctions de lecture requièrent un paramètre de type explicite :
+    `ReadDataArrayJSON[float64]`, `ReadDatasetJSON[T]`, `ReadDataArrayCSV[T]`.
+- **Réductions** :
+  - `Mean`/`MeanAxis` renvoient toujours du `float64` (moyenne d'entiers →
+    flottant, comme xarray) ; `Sum`/`Min`/`Max`/`*Axis` conservent le type `T`.
+  - `Min`/`Max` d'un tableau vide renvoient la **zéro-valeur** de `T` (il n'existe
+    pas de NaN universel pour les entiers) ; `Mean` d'un vide reste `NaN`.
+- Helpers internes génériques : `convertNum`, `convertDataArray`, `reduceAxisVar`,
+  `reduceAxisDA`, `reduceDatasetAxis`.
+- Tests : validation avec `int`, `float32` et `float64` (arithmétique, division
+  entière, réductions, I/O JSON/CSV, `Dataset`).
+
 ### Ajouté (Sprint 4 — Entrées/sorties)
 
 - **JSON (aller-retour)** :

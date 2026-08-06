@@ -8,25 +8,20 @@ import (
 
 // Dataset est une collection de DataArrays (les « variables de données »)
 // partageant un système commun de dimensions et de coordonnées.
-//
-// Toutes les variables portant une même dimension doivent lui donner la même
-// taille ; si plusieurs variables définissent une coordonnée pour une même
-// dimension, ces coordonnées doivent être identiques.
-type Dataset struct {
-	vars   map[string]*DataArray // variables de données, par nom
-	coords map[string]*Variable  // coordonnées de dimension partagées
-	dims   map[string]int        // taille de chaque dimension
+type Dataset[T Number] struct {
+	vars   map[string]*DataArray[T]
+	coords map[string]*Variable[T]
+	dims   map[string]int
 }
 
 // NewDataset construit un Dataset à partir d'un ensemble de variables nommées,
 // en vérifiant la cohérence des dimensions et des coordonnées.
-func NewDataset(vars map[string]*DataArray) (*Dataset, error) {
-	ds := &Dataset{
-		vars:   make(map[string]*DataArray, len(vars)),
-		coords: map[string]*Variable{},
+func NewDataset[T Number](vars map[string]*DataArray[T]) (*Dataset[T], error) {
+	ds := &Dataset[T]{
+		vars:   make(map[string]*DataArray[T], len(vars)),
+		coords: map[string]*Variable[T]{},
 		dims:   map[string]int{},
 	}
-	// Ordre déterministe pour des messages d'erreur stables.
 	names := make([]string, 0, len(vars))
 	for n := range vars {
 		names = append(names, n)
@@ -49,10 +44,9 @@ func NewDataset(vars map[string]*DataArray) (*Dataset, error) {
 				ds.dims[d] = shape[i]
 			}
 		}
-		// Coordonnées : agrégation avec vérification de cohérence.
 		for dim, cv := range da.coords {
 			if existing, ok := ds.coords[dim]; ok {
-				if !sameFloats(existing.data, cv.data) {
+				if !sameSlice(existing.data, cv.data) {
 					return nil, fmt.Errorf("xarray: coordonnées %q incohérentes entre variables", dim)
 				}
 			} else {
@@ -65,7 +59,7 @@ func NewDataset(vars map[string]*DataArray) (*Dataset, error) {
 	return ds, nil
 }
 
-func sameFloats(a, b []float64) bool {
+func sameSlice[T Number](a, b []T) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -78,7 +72,7 @@ func sameFloats(a, b []float64) bool {
 }
 
 // VarNames renvoie les noms des variables de données, triés.
-func (ds *Dataset) VarNames() []string {
+func (ds *Dataset[T]) VarNames() []string {
 	names := make([]string, 0, len(ds.vars))
 	for n := range ds.vars {
 		names = append(names, n)
@@ -88,7 +82,7 @@ func (ds *Dataset) VarNames() []string {
 }
 
 // Get renvoie la variable de données nommée name.
-func (ds *Dataset) Get(name string) (*DataArray, error) {
+func (ds *Dataset[T]) Get(name string) (*DataArray[T], error) {
 	da, ok := ds.vars[name]
 	if !ok {
 		return nil, fmt.Errorf("xarray: variable %q absente du dataset", name)
@@ -97,7 +91,7 @@ func (ds *Dataset) Get(name string) (*DataArray, error) {
 }
 
 // Dims renvoie la taille de chaque dimension du dataset.
-func (ds *Dataset) Dims() map[string]int {
+func (ds *Dataset[T]) Dims() map[string]int {
 	out := make(map[string]int, len(ds.dims))
 	for k, v := range ds.dims {
 		out[k] = v
@@ -106,7 +100,7 @@ func (ds *Dataset) Dims() map[string]int {
 }
 
 // Coord renvoie les étiquettes de la coordonnée partagée dim.
-func (ds *Dataset) Coord(dim string) ([]float64, error) {
+func (ds *Dataset[T]) Coord(dim string) ([]T, error) {
 	cv, ok := ds.coords[dim]
 	if !ok {
 		return nil, fmt.Errorf("xarray: aucune coordonnée %q dans le dataset", dim)
@@ -114,21 +108,20 @@ func (ds *Dataset) Coord(dim string) ([]float64, error) {
 	return cv.Data(), nil
 }
 
-// WithVar renvoie une copie du dataset augmentée (ou remplacée) de la variable
-// name. La cohérence dimensions/coordonnées est revérifiée.
-func (ds *Dataset) WithVar(name string, da *DataArray) (*Dataset, error) {
+// WithVar renvoie une copie du dataset augmentée (ou remplacée) de la variable name.
+func (ds *Dataset[T]) WithVar(name string, da *DataArray[T]) (*Dataset[T], error) {
 	next := ds.cloneVars()
 	next[name] = da
 	return NewDataset(next)
 }
 
 // DropVars renvoie une copie du dataset privée des variables indiquées.
-func (ds *Dataset) DropVars(names ...string) (*Dataset, error) {
+func (ds *Dataset[T]) DropVars(names ...string) (*Dataset[T], error) {
 	drop := make(map[string]struct{}, len(names))
 	for _, n := range names {
 		drop[n] = struct{}{}
 	}
-	next := make(map[string]*DataArray)
+	next := make(map[string]*DataArray[T])
 	for n, da := range ds.vars {
 		if _, ok := drop[n]; ok {
 			continue
@@ -138,9 +131,8 @@ func (ds *Dataset) DropVars(names ...string) (*Dataset, error) {
 	return NewDataset(next)
 }
 
-// Merge fusionne deux datasets. En cas de variable homonyme, celle de other
-// l'emporte ; la cohérence globale est revérifiée.
-func (ds *Dataset) Merge(other *Dataset) (*Dataset, error) {
+// Merge fusionne deux datasets. En cas de variable homonyme, celle de other l'emporte.
+func (ds *Dataset[T]) Merge(other *Dataset[T]) (*Dataset[T], error) {
 	next := ds.cloneVars()
 	for n, da := range other.vars {
 		next[n] = da.clone()
@@ -148,8 +140,8 @@ func (ds *Dataset) Merge(other *Dataset) (*Dataset, error) {
 	return NewDataset(next)
 }
 
-func (ds *Dataset) cloneVars() map[string]*DataArray {
-	next := make(map[string]*DataArray, len(ds.vars))
+func (ds *Dataset[T]) cloneVars() map[string]*DataArray[T] {
+	next := make(map[string]*DataArray[T], len(ds.vars))
 	for n, da := range ds.vars {
 		next[n] = da.clone()
 	}
@@ -160,11 +152,11 @@ func (ds *Dataset) cloneVars() map[string]*DataArray {
 
 // Isel sélectionne par position le long de dim et propage l'opération à toutes
 // les variables portant cette dimension (les autres restent inchangées).
-func (ds *Dataset) Isel(dim string, index int) (*Dataset, error) {
+func (ds *Dataset[T]) Isel(dim string, index int) (*Dataset[T], error) {
 	if _, ok := ds.dims[dim]; !ok {
 		return nil, fmt.Errorf("xarray: dimension %q absente du dataset", dim)
 	}
-	next := make(map[string]*DataArray, len(ds.vars))
+	next := make(map[string]*DataArray[T], len(ds.vars))
 	for name, da := range ds.vars {
 		if da.HasDim(dim) {
 			sub, err := da.Isel(dim, index)
@@ -179,9 +171,8 @@ func (ds *Dataset) Isel(dim string, index int) (*Dataset, error) {
 	return NewDataset(next)
 }
 
-// Sel sélectionne par label le long de dim (via la coordonnée partagée) et
-// propage l'opération à toutes les variables portant cette dimension.
-func (ds *Dataset) Sel(dim string, label float64) (*Dataset, error) {
+// Sel sélectionne par label le long de dim (via la coordonnée partagée).
+func (ds *Dataset[T]) Sel(dim string, label T) (*Dataset[T], error) {
 	cv, ok := ds.coords[dim]
 	if !ok {
 		return nil, fmt.Errorf("xarray: indexation par label impossible : aucune coordonnée %q", dim)
@@ -201,11 +192,32 @@ func (ds *Dataset) Sel(dim string, label float64) (*Dataset, error) {
 
 // --- Réductions propagées ---------------------------------------------------
 
-func (ds *Dataset) reduceAxis(dim string, reducer func(*DataArray) (*DataArray, error)) (*Dataset, error) {
+// convertDataArray convertit un DataArray d'un type numérique vers un autre.
+func convertDataArray[T, R Number](da *DataArray[T]) *DataArray[R] {
+	data := make([]R, len(da.variable.data))
+	for i, x := range da.variable.data {
+		data[i] = convertNum[T, R](x)
+	}
+	nv, _ := NewVariable(da.variable.Dims(), da.variable.Shape(), data)
+	coords := make(map[string]*Variable[R], len(da.coords))
+	for k, cv := range da.coords {
+		lbl := make([]R, len(cv.data))
+		for i, x := range cv.data {
+			lbl[i] = convertNum[T, R](x)
+		}
+		nc, _ := NewVariable(cv.Dims(), cv.Shape(), lbl)
+		coords[k] = nc
+	}
+	return &DataArray[R]{variable: nv, coords: coords, name: da.name}
+}
+
+// reduceDatasetAxis applique reducer aux variables portant dim et convertit les
+// autres vers le type de sortie R, puis reconstruit un Dataset[R].
+func reduceDatasetAxis[T, R Number](ds *Dataset[T], dim string, reducer func(*DataArray[T]) (*DataArray[R], error)) (*Dataset[R], error) {
 	if _, ok := ds.dims[dim]; !ok {
 		return nil, fmt.Errorf("xarray: dimension %q absente du dataset", dim)
 	}
-	next := make(map[string]*DataArray, len(ds.vars))
+	next := make(map[string]*DataArray[R], len(ds.vars))
 	for name, da := range ds.vars {
 		if da.HasDim(dim) {
 			r, err := reducer(da)
@@ -214,38 +226,37 @@ func (ds *Dataset) reduceAxis(dim string, reducer func(*DataArray) (*DataArray, 
 			}
 			next[name] = r
 		} else {
-			next[name] = da.clone()
+			next[name] = convertDataArray[T, R](da)
 		}
 	}
 	return NewDataset(next)
 }
 
 // SumAxis réduit la dimension dim par somme sur toutes les variables concernées.
-func (ds *Dataset) SumAxis(dim string) (*Dataset, error) {
-	return ds.reduceAxis(dim, func(da *DataArray) (*DataArray, error) { return da.SumAxis(dim) })
+func (ds *Dataset[T]) SumAxis(dim string) (*Dataset[T], error) {
+	return reduceDatasetAxis[T, T](ds, dim, func(da *DataArray[T]) (*DataArray[T], error) { return da.SumAxis(dim) })
 }
 
-// MeanAxis réduit la dimension dim par moyenne.
-func (ds *Dataset) MeanAxis(dim string) (*Dataset, error) {
-	return ds.reduceAxis(dim, func(da *DataArray) (*DataArray, error) { return da.MeanAxis(dim) })
+// MeanAxis réduit la dimension dim par moyenne (résultat en float64).
+func (ds *Dataset[T]) MeanAxis(dim string) (*Dataset[float64], error) {
+	return reduceDatasetAxis[T, float64](ds, dim, func(da *DataArray[T]) (*DataArray[float64], error) { return da.MeanAxis(dim) })
 }
 
 // MinAxis réduit la dimension dim par minimum.
-func (ds *Dataset) MinAxis(dim string) (*Dataset, error) {
-	return ds.reduceAxis(dim, func(da *DataArray) (*DataArray, error) { return da.MinAxis(dim) })
+func (ds *Dataset[T]) MinAxis(dim string) (*Dataset[T], error) {
+	return reduceDatasetAxis[T, T](ds, dim, func(da *DataArray[T]) (*DataArray[T], error) { return da.MinAxis(dim) })
 }
 
 // MaxAxis réduit la dimension dim par maximum.
-func (ds *Dataset) MaxAxis(dim string) (*Dataset, error) {
-	return ds.reduceAxis(dim, func(da *DataArray) (*DataArray, error) { return da.MaxAxis(dim) })
+func (ds *Dataset[T]) MaxAxis(dim string) (*Dataset[T], error) {
+	return reduceDatasetAxis[T, T](ds, dim, func(da *DataArray[T]) (*DataArray[T], error) { return da.MaxAxis(dim) })
 }
 
 // String fournit une représentation lisible du dataset.
-func (ds *Dataset) String() string {
+func (ds *Dataset[T]) String() string {
 	var b strings.Builder
 	b.WriteString("<xarray.Dataset>\n")
 
-	// Dimensions.
 	dimNames := make([]string, 0, len(ds.dims))
 	for d := range ds.dims {
 		dimNames = append(dimNames, d)
@@ -257,7 +268,6 @@ func (ds *Dataset) String() string {
 	}
 	fmt.Fprintf(&b, "Dimensions : (%s)\n", strings.Join(parts, ", "))
 
-	// Coordonnées.
 	if len(ds.coords) > 0 {
 		b.WriteString("Coordonnées :\n")
 		coordNames := make([]string, 0, len(ds.coords))
@@ -270,15 +280,10 @@ func (ds *Dataset) String() string {
 		}
 	}
 
-	// Variables de données.
 	b.WriteString("Variables de données :\n")
 	for _, name := range ds.VarNames() {
 		da := ds.vars[name]
-		dp := make([]string, len(da.variable.dims))
-		for i, d := range da.variable.dims {
-			dp[i] = d
-		}
-		fmt.Fprintf(&b, "    %-10s (%s) %v\n", name, strings.Join(dp, ", "), da.variable.data)
+		fmt.Fprintf(&b, "    %-10s (%s) %v\n", name, strings.Join(da.variable.dims, ", "), da.variable.data)
 	}
 	return b.String()
 }

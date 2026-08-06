@@ -45,8 +45,18 @@ Objectif : interopérer avec des formats de fichiers.
 
 **Statut : terminé** (hors netCDF, reporté au backlog).
 
+## Sprint 5 — Généralisation des types (generics) ✅
+
+Objectif : lever la limite `float64` (dette T-01).
+
+- `Variable[T]`, `DataArray[T]`, `Dataset[T]` avec la contrainte `Number`.
+- `Mean`/`MeanAxis` en `float64` ; autres réductions en `T`.
+- Validation avec `int`, `float32`, `float64`.
+
+**Statut : terminé.**
+
 ## Transverse (continu)
 
 - Couverture de tests, `go vet`, intégration continue.
-- Benchmarks.
-- Étude de la généralisation du type de données (generics).
+- Benchmarks (dette T-03).
+- Jointures externes pour l'alignement.
