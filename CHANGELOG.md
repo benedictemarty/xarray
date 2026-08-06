@@ -7,6 +7,13 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.3.0] — 2026-08-06
+
+Troisième version : jointures externes, `concat`/`stack`, `groupby`
+(DataArray et Dataset), `skipna`, moteur de calcul `ndarray` (avec API in-place
+rejoignant NumPy), volet performance honnête (comparaison NumPy pur / xarray,
+expérience SIMD et cgo).
+
 ### Ajouté (Sprint 17 — `skipna`)
 
 - **Réductions ignorant les NaN** : globales (`SumSkipNA`, `MeanSkipNA`,
