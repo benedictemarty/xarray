@@ -7,6 +7,13 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.4.0] — 2026-08-06
+
+Quatrième version : accélération de l'arithmétique float64 (noyaux directs sans
+closure sur les quatre opérations, broadcast par lignes ~2×), algèbre linéaire
+(`Matmul`/`MatVec`/`T`) et paquet de ML classique (`ml` : régression linéaire,
+standardisation).
+
 ### Ajouté (Sprint 23 — ML classique : paquet `ml`)
 
 - **Nouveau paquet `ml`** (sur `ndarray`) :
