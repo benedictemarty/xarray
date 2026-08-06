@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.1.0] — 2026-08-06
+
+Première version publiée : modèle de données étiqueté complet (DataArray,
+Dataset), opérations (broadcasting, alignement interne, réductions), I/O
+JSON/CSV, et types génériques.
+
 ### Modifié (Sprint 5 — Généralisation des types / dette T-01)
 
 - **BREAKING** : `Variable`, `DataArray` et `Dataset` sont désormais **génériques**
