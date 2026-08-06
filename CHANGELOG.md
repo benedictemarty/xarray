@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Performances (Sprint 20 — Broadcasting float64 spécialisé)
+
+- **`broadcastFloat64`** : broadcasting par nom spécialisé float64 (sélection de
+  l'opération par switch, sans closure), branché sur `Add`/`Sub`/`Mul`/`Div`.
+- Refactorisation utile : `broadcastLayout` (préparation du layout de
+  broadcasting) et `parallelFill` (dispatcher de parallélisation) extraits et
+  mutualisés.
+- **Résultat honnête** : gain **marginal** (~10 % sur 1 M, nul sur 40 k). Pour le
+  broadcast, le goulot est l'itération strided et les accès mémoire non contigus,
+  pas la closure — enseignement documenté dans `docs/BENCHMARKS.md`.
+
 ### Performances (Sprint 19 — Noyaux directs float64 sur toute l'arithmétique)
 
 - Le chemin rapide float64 sans closure (auparavant limité à `Add`) est **branché

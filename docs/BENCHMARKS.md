@@ -82,6 +82,13 @@ chantier « porter NumPy en Go » (voir `docs/NDARRAY.md`).
 - **Sprint 19** : le noyau direct float64 (sans closure) est branché sur les
   **quatre** opérations. `Mul`/`Sub`/`Div` 1 M passent de ~3218 µs (closure
   générique) à ~1545 µs (2,1×), comme `Add`.
+- **Sprint 20** : spécialisation float64 du **broadcasting** (`broadcastFloat64`,
+  switch au lieu de closure). **Gain marginal** (~10 % sur 1 M, nul sur 40 k) —
+  contrairement au cas même-forme. Enseignement honnête : pour le broadcast, le
+  coût dominant n'est pas la closure mais l'**itération strided** et les **accès
+  mémoire non contigus** (un opérande a un stride 0). La closure n'était pas le
+  goulot. Le refactoring associé (`broadcastLayout`, `parallelFill`) est en
+  revanche une simplification utile, conservée.
 
 ## Pourquoi Go n'a pas d'auto-vectorisation SIMD (comme le C de NumPy) ?
 

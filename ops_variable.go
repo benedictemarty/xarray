@@ -196,7 +196,29 @@ func binaryOp[T Number](a, b *Variable[T], fn func(x, y T) T) (*Variable[T], err
 		return out, nil
 	}
 
-	resDims := append([]string(nil), a.dims...)
+	resDims, resShape, aSt, bSt, err := broadcastLayout(a, b)
+	if err != nil {
+		return nil, err
+	}
+	out := &Variable[T]{
+		dims:  resDims,
+		shape: resShape,
+		data:  make([]T, product(resShape)),
+		attrs: map[string]string{},
+	}
+	resStrides := out.strides()
+
+	parallelFill(len(out.data), func(lo, hi int) {
+		fillBinaryRange(out.data, a.data, b.data, fn, aSt, bSt, resShape, resStrides, lo, hi)
+	})
+	return out, nil
+}
+
+// broadcastLayout calcule les dimensions et la forme du résultat d'un
+// broadcasting par nom, ainsi que les strides effectifs de chaque opérande par
+// position (0 si la dimension est absente, ce qui la neutralise).
+func broadcastLayout[T Number](a, b *Variable[T]) (resDims []string, resShape, aSt, bSt []int, err error) {
+	resDims = append([]string(nil), a.dims...)
 	sizeByDim := make(map[string]int, len(a.dims)+len(b.dims))
 	for i, d := range a.dims {
 		sizeByDim[d] = a.shape[i]
@@ -204,43 +226,32 @@ func binaryOp[T Number](a, b *Variable[T], fn func(x, y T) T) (*Variable[T], err
 	for i, d := range b.dims {
 		if s, ok := sizeByDim[d]; ok {
 			if s != b.shape[i] {
-				return nil, fmt.Errorf("xarray: tailles incompatibles pour la dimension %q (%d vs %d)", d, s, b.shape[i])
+				return nil, nil, nil, nil, fmt.Errorf("xarray: tailles incompatibles pour la dimension %q (%d vs %d)", d, s, b.shape[i])
 			}
 			continue
 		}
 		sizeByDim[d] = b.shape[i]
 		resDims = append(resDims, d)
 	}
-	resShape := make([]int, len(resDims))
+	resShape = make([]int, len(resDims))
 	for i, d := range resDims {
 		resShape[i] = sizeByDim[d]
 	}
-
-	out := &Variable[T]{
-		dims:  resDims,
-		shape: resShape,
-		data:  make([]T, product(resShape)),
-		attrs: map[string]string{},
-	}
-
-	// Pré-calcul des strides par position du résultat (0 si la dimension est
-	// absente de l'opérande, ce qui la neutralise). Évite tout accès à une map
-	// dans la boucle interne parcourue à chaque élément.
 	aStrides := strideByDim(a)
 	bStrides := strideByDim(b)
-	aSt := make([]int, len(resDims))
-	bSt := make([]int, len(resDims))
+	aSt = make([]int, len(resDims))
+	bSt = make([]int, len(resDims))
 	for i, d := range resDims {
 		aSt[i] = aStrides[d]
 		bSt[i] = bStrides[d]
 	}
+	return resDims, resShape, aSt, bSt, nil
+}
 
-	resStrides := out.strides()
-
-	// Au-delà d'un seuil, on répartit le remplissage sur plusieurs cœurs : chaque
-	// travailleur écrit une plage disjointe de out.data (aucune course de données).
+// parallelFill exécute fill sur des plages disjointes de [0,size) : en parallèle
+// au-delà d'un seuil (chaque plage est indépendante), séquentiellement sinon.
+func parallelFill(size int, fill func(lo, hi int)) {
 	const seuilParallele = 1 << 15
-	size := len(out.data)
 	if size >= seuilParallele {
 		nw := runtime.GOMAXPROCS(0)
 		if nw > size {
@@ -260,15 +271,13 @@ func binaryOp[T Number](a, b *Variable[T], fn func(x, y T) T) (*Variable[T], err
 			wg.Add(1)
 			go func(lo, hi int) {
 				defer wg.Done()
-				fillBinaryRange(out.data, a.data, b.data, fn, aSt, bSt, resShape, resStrides, lo, hi)
+				fill(lo, hi)
 			}(lo, hi)
 		}
 		wg.Wait()
-		return out, nil
+		return
 	}
-
-	fillBinaryRange(out.data, a.data, b.data, fn, aSt, bSt, resShape, resStrides, 0, size)
-	return out, nil
+	fill(0, size)
 }
 
 // fillBinaryRange remplit out[lo:hi] en itérant de façon incrémentale sur les

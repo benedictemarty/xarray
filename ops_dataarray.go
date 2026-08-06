@@ -227,7 +227,7 @@ func (da *DataArray[T]) binary(other *DataArray[T], fn func(x, y T) T) (*DataArr
 // élément) ; l'éviter accélère l'opération d'un ordre de grandeur sur les grands
 // tableaux (voir docs/BENCHMARKS.md).
 func (da *DataArray[T]) Add(other *DataArray[T]) (*DataArray[T], error) {
-	if r, ok, err := da.binaryFloat64Fast(other, addFloat64); err != nil {
+	if r, ok, err := da.binaryFloat64Fast(other, opAdd); err != nil {
 		return nil, err
 	} else if ok {
 		return r, nil
@@ -237,7 +237,7 @@ func (da *DataArray[T]) Add(other *DataArray[T]) (*DataArray[T], error) {
 
 // Sub renvoie da - other.
 func (da *DataArray[T]) Sub(other *DataArray[T]) (*DataArray[T], error) {
-	if r, ok, err := da.binaryFloat64Fast(other, subFloat64); err != nil {
+	if r, ok, err := da.binaryFloat64Fast(other, opSub); err != nil {
 		return nil, err
 	} else if ok {
 		return r, nil
@@ -247,7 +247,7 @@ func (da *DataArray[T]) Sub(other *DataArray[T]) (*DataArray[T], error) {
 
 // Mul renvoie da * other.
 func (da *DataArray[T]) Mul(other *DataArray[T]) (*DataArray[T], error) {
-	if r, ok, err := da.binaryFloat64Fast(other, mulFloat64); err != nil {
+	if r, ok, err := da.binaryFloat64Fast(other, opMul); err != nil {
 		return nil, err
 	} else if ok {
 		return r, nil
@@ -257,7 +257,7 @@ func (da *DataArray[T]) Mul(other *DataArray[T]) (*DataArray[T], error) {
 
 // Div renvoie da / other.
 func (da *DataArray[T]) Div(other *DataArray[T]) (*DataArray[T], error) {
-	if r, ok, err := da.binaryFloat64Fast(other, divFloat64); err != nil {
+	if r, ok, err := da.binaryFloat64Fast(other, opDiv); err != nil {
 		return nil, err
 	} else if ok {
 		return r, nil
@@ -265,12 +265,12 @@ func (da *DataArray[T]) Div(other *DataArray[T]) (*DataArray[T], error) {
 	return da.binary(other, func(x, y T) T { return x / y })
 }
 
-// binaryFloat64Fast applique un noyau spécialisé float64 (sans closure) quand
-// les données sont des float64 et que, après alignement, les deux opérandes ont
-// exactement la même forme. Renvoie ok=false pour signaler le repli sur le
-// chemin générique (autre type, ou broadcasting requis). Mutualise la logique
-// d'alignement et de reconstruction des coordonnées pour les quatre opérations.
-func (da *DataArray[T]) binaryFloat64Fast(other *DataArray[T], kernel func(dst, x, y []float64)) (*DataArray[T], bool, error) {
+// binaryFloat64Fast applique des noyaux spécialisés float64 (sans closure) quand
+// les données sont des float64 — pour les mêmes formes (boucle directe) comme
+// pour le broadcasting (broadcastFloat64). Renvoie ok=false uniquement pour un
+// type non float64 (repli sur le chemin générique). Mutualise l'alignement et la
+// reconstruction des coordonnées pour les quatre opérations.
+func (da *DataArray[T]) binaryFloat64Fast(other *DataArray[T], op binOp) (*DataArray[T], bool, error) {
 	if _, ok := any(da.variable.data).([]float64); !ok {
 		return nil, false, nil
 	}
@@ -278,20 +278,31 @@ func (da *DataArray[T]) binaryFloat64Fast(other *DataArray[T], kernel func(dst, 
 	if err != nil {
 		return nil, false, err
 	}
-	if !sameDimsShape(a.variable, b.variable) {
-		return nil, false, nil
-	}
-	ad := any(a.variable.data).([]float64)
-	bd := any(b.variable.data).([]float64)
-	dst := make([]float64, len(ad))
-	kernel(dst, ad, bd)
+	af := any(a.variable).(*Variable[float64])
+	bf := any(b.variable).(*Variable[float64])
 
-	nv := &Variable[T]{
-		dims:  a.variable.Dims(),
-		shape: a.variable.Shape(),
-		data:  any(dst).([]T),
-		attrs: map[string]string{},
+	var rvf *Variable[float64]
+	if sameDimsShape(a.variable, b.variable) {
+		dst := make([]float64, len(af.data))
+		switch op {
+		case opAdd:
+			addFloat64(dst, af.data, bf.data)
+		case opSub:
+			subFloat64(dst, af.data, bf.data)
+		case opMul:
+			mulFloat64(dst, af.data, bf.data)
+		case opDiv:
+			divFloat64(dst, af.data, bf.data)
+		}
+		rvf = &Variable[float64]{dims: af.Dims(), shape: af.Shape(), data: dst, attrs: map[string]string{}}
+	} else {
+		rvf, err = broadcastFloat64(af, bf, op)
+		if err != nil {
+			return nil, false, err
+		}
 	}
+
+	nv := any(rvf).(*Variable[T])
 	coords := make(map[string]*Variable[T], len(nv.dims))
 	for _, dim := range nv.dims {
 		if cv, ok := a.coords[dim]; ok {
