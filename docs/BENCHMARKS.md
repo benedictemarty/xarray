@@ -24,8 +24,8 @@ Trois références, médianes (Go : `-count=6` ; Python : calibrage adaptatif) :
 |-----------|--------|-----------|---------------|--------|
 | `Add` (aligné) | 100×100 | 19 µs | **4,2 µs** | 225 µs |
 | `Add` (aligné) grand | 1000×1000 | 1801 µs | **733 µs** | 1088 µs |
-| `Broadcast` | 200×200 | 184 µs | **34 µs** | 125 µs |
-| `Broadcast` grand | 1000×1000 | 2650 µs | **855 µs** | 1000 µs |
+| `Broadcast` | 200×200 | 134 µs | **34 µs** | 125 µs |
+| `Broadcast` grand | 1000×1000 | 1350 µs | **855 µs** | 1000 µs |
 | `SumAxis` | 100×100 | 15 µs | **3,2 µs** | 76 µs |
 | `MeanAxis` | 100×100 | 15 µs | **4,7 µs** | 73 µs |
 | `GroupBy.Sum` | contigu | 173 µs | **0,6 µs**¹ | 732 µs |
@@ -89,6 +89,11 @@ chantier « porter NumPy en Go » (voir `docs/NDARRAY.md`).
   mémoire non contigus** (un opérande a un stride 0). La closure n'était pas le
   goulot. Le refactoring associé (`broadcastLayout`, `parallelFill`) est en
   revanche une simplification utile, conservée.
+- **Sprint 21** : broadcast réécrit en **itération par lignes** — boucle interne
+  **contiguë** sur le dernier axe, scalaire hissé quand un stride interne est nul.
+  C'était le bon levier : `Broadcast` 1 M passe de 2650 µs à **1350 µs** (~2×), et
+  l'écart avec NumPy tombe de 2,5× à **1,6×**. Le coût dominant était bien la
+  **structure d'itération** (overhead par élément), non la closure du Sprint 20.
 
 ## Pourquoi Go n'a pas d'auto-vectorisation SIMD (comme le C de NumPy) ?
 

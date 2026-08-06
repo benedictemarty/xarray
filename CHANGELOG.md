@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Performances (Sprint 21 — Broadcast par lignes, itération strided optimisée)
+
+- **Réécriture du broadcast float64 en itération par lignes** : boucle interne
+  **contiguë** sur le dernier axe, avec scalaire hissé quand un stride interne est
+  nul (cas typique). Noyaux contigus spécialisés `fillScalarVec`/`fillVecScalar`/
+  `fillVecVec` ; dispatcher `parallelLines` (parallélise selon le volume total,
+  même quand les lignes sont peu nombreuses mais longues).
+- **Gain net** : `Broadcast` 1 M passe de 2650 µs à **1350 µs** (~2×) ; écart avec
+  NumPy réduit de 2,5× à **1,6×**. Le vrai goulot était la structure d'itération,
+  pas la closure — confirmé.
+
 ### Performances (Sprint 20 — Broadcasting float64 spécialisé)
 
 - **`broadcastFloat64`** : broadcasting par nom spécialisé float64 (sélection de

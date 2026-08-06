@@ -248,6 +248,41 @@ func broadcastLayout[T Number](a, b *Variable[T]) (resDims []string, resShape, a
 	return resDims, resShape, aSt, bSt, nil
 }
 
+// parallelLines répartit numLines lignes sur plusieurs cœurs si le travail total
+// (totalSize) dépasse le seuil, en découpant l'espace des lignes (chaque plage de
+// lignes est indépendante). Contrairement à parallelFill, la décision de
+// paralléliser dépend du volume total, pas du nombre de lignes (qui peut être
+// petit alors que chaque ligne est longue).
+func parallelLines(numLines, totalSize int, fill func(loLine, hiLine int)) {
+	const seuilParallele = 1 << 15
+	if totalSize >= seuilParallele && numLines > 1 {
+		nw := runtime.GOMAXPROCS(0)
+		if nw > numLines {
+			nw = numLines
+		}
+		chunk := (numLines + nw - 1) / nw
+		var wg sync.WaitGroup
+		for w := 0; w < nw; w++ {
+			lo := w * chunk
+			if lo >= numLines {
+				break
+			}
+			hi := lo + chunk
+			if hi > numLines {
+				hi = numLines
+			}
+			wg.Add(1)
+			go func(lo, hi int) {
+				defer wg.Done()
+				fill(lo, hi)
+			}(lo, hi)
+		}
+		wg.Wait()
+		return
+	}
+	fill(0, numLines)
+}
+
 // parallelFill exécute fill sur des plages disjointes de [0,size) : en parallèle
 // au-delà d'un seuil (chaque plage est indépendante), séquentiellement sinon.
 func parallelFill(size int, fill func(lo, hi int)) {
