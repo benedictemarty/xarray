@@ -79,6 +79,9 @@ chantier « porter NumPy en Go » (voir `docs/NDARRAY.md`).
   identiques » dans `binaryOp` (`Add` 348 µs → 250 µs).
 - **Sprint 11** : l'alignement ne recopie plus les coordonnées déjà identiques
   (`Add` 272 µs → 48 µs, 135 → 18 allocations) — Go passe devant NumPy sur `Add`.
+- **Sprint 19** : le noyau direct float64 (sans closure) est branché sur les
+  **quatre** opérations. `Mul`/`Sub`/`Div` 1 M passent de ~3218 µs (closure
+  générique) à ~1545 µs (2,1×), comme `Add`.
 
 ## Pourquoi Go n'a pas d'auto-vectorisation SIMD (comme le C de NumPy) ?
 

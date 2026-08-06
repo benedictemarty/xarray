@@ -14,3 +14,24 @@ func addFloat64(dst, x, y []float64) {
 		dst[i] = x[i] + y[i]
 	}
 }
+
+// Noyaux spécialisés float64 (sans closure) pour les autres opérations, dans le
+// même esprit : boucles nues optimisées par le compilateur.
+
+func subFloat64(dst, x, y []float64) {
+	for i := 0; i < len(dst); i++ {
+		dst[i] = x[i] - y[i]
+	}
+}
+
+func mulFloat64(dst, x, y []float64) {
+	for i := 0; i < len(dst); i++ {
+		dst[i] = x[i] * y[i]
+	}
+}
+
+func divFloat64(dst, x, y []float64) {
+	for i := 0; i < len(dst); i++ {
+		dst[i] = x[i] / y[i]
+	}
+}

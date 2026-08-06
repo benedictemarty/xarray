@@ -33,6 +33,40 @@ func BenchmarkAdd(b *testing.B) {
 	}
 }
 
+func BenchmarkMulSameShape(b *testing.B) {
+	a := grille2D(1000) // 1 M, mêmes coordonnées -> chemin rapide float64
+	c := grille2D(1000)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := a.Mul(c); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkSubSameShape(b *testing.B) {
+	a := grille2D(1000)
+	c := grille2D(1000)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := a.Sub(c); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Référence : chemin générique (closure) pour mesurer l'apport du noyau direct.
+func BenchmarkMulGeneric1M(b *testing.B) {
+	a := grille2D(1000)
+	c := grille2D(1000)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := a.binary(c, func(x, y float64) float64 { return x * y }); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkSumAxis(b *testing.B) {
 	a := grille2D(100)
 	b.ResetTimer()

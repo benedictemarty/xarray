@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Performances (Sprint 19 — Noyaux directs float64 sur toute l'arithmétique)
+
+- Le chemin rapide float64 sans closure (auparavant limité à `Add`) est **branché
+  sur `Sub`, `Mul`, `Div`** via `binaryFloat64Fast(kernel)` mutualisé, avec les
+  noyaux `subFloat64`/`mulFloat64`/`divFloat64`.
+- `Mul`/`Sub`/`Div` sur 1 M (mêmes coordonnées) : ~3218 µs (closure générique) →
+  **~1545 µs** (2,1×). Équivalence avec le chemin générique vérifiée par test.
+
 ## [0.3.0] — 2026-08-06
 
 Troisième version : jointures externes, `concat`/`stack`, `groupby`

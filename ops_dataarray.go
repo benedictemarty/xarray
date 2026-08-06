@@ -222,12 +222,12 @@ func (da *DataArray[T]) binary(other *DataArray[T], fn func(x, y T) T) (*DataArr
 // Add renvoie da + other (avec alignement et broadcasting).
 //
 // Optimisation : pour le cas fréquent « float64, mêmes dimensions après
-// alignement », on utilise une addition directe (addFloat64) sans closure. Le
-// chemin générique passe par une closure func(T,T) T qui n'est pas inlinée (un
-// appel par élément) ; l'éviter accélère l'opération d'un ordre de grandeur sur
-// les grands tableaux (voir docs/BENCHMARKS.md).
+// alignement », on utilise un noyau direct (addFloat64) sans closure. Le chemin
+// générique passe par une closure func(T,T) T non inlinée (un appel par
+// élément) ; l'éviter accélère l'opération d'un ordre de grandeur sur les grands
+// tableaux (voir docs/BENCHMARKS.md).
 func (da *DataArray[T]) Add(other *DataArray[T]) (*DataArray[T], error) {
-	if r, ok, err := da.addFast(other); err != nil {
+	if r, ok, err := da.binaryFloat64Fast(other, addFloat64); err != nil {
 		return nil, err
 	} else if ok {
 		return r, nil
@@ -235,10 +235,42 @@ func (da *DataArray[T]) Add(other *DataArray[T]) (*DataArray[T], error) {
 	return da.binary(other, func(x, y T) T { return x + y })
 }
 
-// addFast : chemin rapide float64 à formes identiques (sans closure). Renvoie
-// ok=false pour signaler le repli sur le chemin générique (autre type, ou
-// broadcasting requis).
-func (da *DataArray[T]) addFast(other *DataArray[T]) (*DataArray[T], bool, error) {
+// Sub renvoie da - other.
+func (da *DataArray[T]) Sub(other *DataArray[T]) (*DataArray[T], error) {
+	if r, ok, err := da.binaryFloat64Fast(other, subFloat64); err != nil {
+		return nil, err
+	} else if ok {
+		return r, nil
+	}
+	return da.binary(other, func(x, y T) T { return x - y })
+}
+
+// Mul renvoie da * other.
+func (da *DataArray[T]) Mul(other *DataArray[T]) (*DataArray[T], error) {
+	if r, ok, err := da.binaryFloat64Fast(other, mulFloat64); err != nil {
+		return nil, err
+	} else if ok {
+		return r, nil
+	}
+	return da.binary(other, func(x, y T) T { return x * y })
+}
+
+// Div renvoie da / other.
+func (da *DataArray[T]) Div(other *DataArray[T]) (*DataArray[T], error) {
+	if r, ok, err := da.binaryFloat64Fast(other, divFloat64); err != nil {
+		return nil, err
+	} else if ok {
+		return r, nil
+	}
+	return da.binary(other, func(x, y T) T { return x / y })
+}
+
+// binaryFloat64Fast applique un noyau spécialisé float64 (sans closure) quand
+// les données sont des float64 et que, après alignement, les deux opérandes ont
+// exactement la même forme. Renvoie ok=false pour signaler le repli sur le
+// chemin générique (autre type, ou broadcasting requis). Mutualise la logique
+// d'alignement et de reconstruction des coordonnées pour les quatre opérations.
+func (da *DataArray[T]) binaryFloat64Fast(other *DataArray[T], kernel func(dst, x, y []float64)) (*DataArray[T], bool, error) {
 	if _, ok := any(da.variable.data).([]float64); !ok {
 		return nil, false, nil
 	}
@@ -252,7 +284,7 @@ func (da *DataArray[T]) addFast(other *DataArray[T]) (*DataArray[T], bool, error
 	ad := any(a.variable.data).([]float64)
 	bd := any(b.variable.data).([]float64)
 	dst := make([]float64, len(ad))
-	addFloat64(dst, ad, bd)
+	kernel(dst, ad, bd)
 
 	nv := &Variable[T]{
 		dims:  a.variable.Dims(),
@@ -269,21 +301,6 @@ func (da *DataArray[T]) addFast(other *DataArray[T]) (*DataArray[T], bool, error
 		}
 	}
 	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, true, nil
-}
-
-// Sub renvoie da - other.
-func (da *DataArray[T]) Sub(other *DataArray[T]) (*DataArray[T], error) {
-	return da.binary(other, func(x, y T) T { return x - y })
-}
-
-// Mul renvoie da * other.
-func (da *DataArray[T]) Mul(other *DataArray[T]) (*DataArray[T], error) {
-	return da.binary(other, func(x, y T) T { return x * y })
-}
-
-// Div renvoie da / other.
-func (da *DataArray[T]) Div(other *DataArray[T]) (*DataArray[T], error) {
-	return da.binary(other, func(x, y T) T { return x / y })
 }
 
 // --- Opérations scalaires ---------------------------------------------------
