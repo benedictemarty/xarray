@@ -69,6 +69,18 @@ func NewVariable[T Number](dims []string, shape []int, data []T) (*Variable[T], 
 	}, nil
 }
 
+// cloneVar copie la variable en profondeur sans repasser par la validation de
+// NewVariable (les données sont déjà connues valides). Évite une double copie
+// sur les chemins internes (clone, réindexation, coordonnées).
+func (v *Variable[T]) cloneVar() *Variable[T] {
+	return &Variable[T]{
+		dims:  append([]string(nil), v.dims...),
+		shape: append([]int(nil), v.shape...),
+		data:  append([]T(nil), v.data...),
+		attrs: v.Attrs(),
+	}
+}
+
 // Dims renvoie une copie des noms de dimensions.
 func (v *Variable[T]) Dims() []string { return append([]string(nil), v.dims...) }
 

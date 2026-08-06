@@ -152,7 +152,7 @@ func (da *DataArray[T]) reindex(dim string, target []T, fill T) (*DataArray[T], 
 			coords[k] = nc
 			continue
 		}
-		nc, _ := NewVariable(c.Dims(), c.Shape(), c.Data())
+		nc := c.cloneVar()
 		coords[k] = nc
 	}
 	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, nil
@@ -199,10 +199,10 @@ func (da *DataArray[T]) binaryJoin(other *DataArray[T], fn func(x, y T) T, join 
 	coords := make(map[string]*Variable[T], len(nv.dims))
 	for _, dim := range nv.dims {
 		if cv, ok := a.coords[dim]; ok {
-			nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+			nc := cv.cloneVar()
 			coords[dim] = nc
 		} else if cv, ok := b.coords[dim]; ok {
-			nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+			nc := cv.cloneVar()
 			coords[dim] = nc
 		}
 	}

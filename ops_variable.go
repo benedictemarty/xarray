@@ -204,19 +204,24 @@ func binaryOp[T Number](a, b *Variable[T], fn func(x, y T) T) (*Variable[T], err
 		attrs: map[string]string{},
 	}
 
+	// Pré-calcul des strides par position du résultat (0 si la dimension est
+	// absente de l'opérande, ce qui la neutralise). Évite tout accès à une map
+	// dans la boucle interne parcourue à chaque élément.
 	aStrides := strideByDim(a)
 	bStrides := strideByDim(b)
+	aSt := make([]int, len(resDims))
+	bSt := make([]int, len(resDims))
+	for i, d := range resDims {
+		aSt[i] = aStrides[d]
+		bSt[i] = bStrides[d]
+	}
 
 	counter := make([]int, len(resDims))
 	for flat := range out.data {
 		flatA, flatB := 0, 0
-		for i, d := range resDims {
-			if st, ok := aStrides[d]; ok {
-				flatA += counter[i] * st
-			}
-			if st, ok := bStrides[d]; ok {
-				flatB += counter[i] * st
-			}
+		for i := range resDims {
+			flatA += counter[i] * aSt[i]
+			flatB += counter[i] * bSt[i]
 		}
 		out.data[flat] = fn(a.data[flatA], b.data[flatB])
 

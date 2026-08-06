@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Performances (Sprint 7 — T-03)
+
+- **Optimisation de `binaryOp`** (arithmétique/broadcasting) : pré-calcul des
+  strides par position, supprimant les accès à une map dans la boucle interne.
+  Gains mesurés : `Add` ×2,2, `Broadcast` ×6,2, `OuterJoin` ×2,0.
+- **Clonage sans revalidation** : nouveau `Variable.cloneVar` (copie profonde
+  directe) utilisé sur les chemins internes (`clone`, `Isel`, `reindex`,
+  coordonnées…) à la place de `NewVariable`, évitant une double copie et la
+  revalidation de données déjà valides.
+- **Benchmarks** : suite `bench_test.go` (Add, SumAxis, MeanAxis, Broadcast,
+  Clone, WriteCSV, OuterJoin).
+
 ### Ajouté (Sprint 6 — Jointures externes)
 
 - **Stratégies de jointure** pour l'alignement des coordonnées avant opération :

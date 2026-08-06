@@ -95,10 +95,10 @@ func (da *DataArray[T]) Coord(dim string) ([]T, error) {
 func (da *DataArray[T]) clone() *DataArray[T] {
 	coords := make(map[string]*Variable[T], len(da.coords))
 	for k, cv := range da.coords {
-		nv, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+		nv := cv.cloneVar()
 		coords[k] = nv
 	}
-	nv, _ := NewVariable(da.variable.Dims(), da.variable.Shape(), da.variable.Data())
+	nv := da.variable.cloneVar()
 	return &DataArray[T]{variable: nv, coords: coords, name: da.name}
 }
 
@@ -114,7 +114,7 @@ func (da *DataArray[T]) Isel(dim string, index int) (*DataArray[T], error) {
 		if k == dim {
 			continue
 		}
-		ncv, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+		ncv := cv.cloneVar()
 		coords[k] = ncv
 	}
 	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, nil

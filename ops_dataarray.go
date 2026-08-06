@@ -72,7 +72,7 @@ func (da *DataArray[T]) Transpose(newDims ...string) (*DataArray[T], error) {
 func (da *DataArray[T]) cloneCoords() map[string]*Variable[T] {
 	coords := make(map[string]*Variable[T], len(da.coords))
 	for k, cv := range da.coords {
-		nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+		nc := cv.cloneVar()
 		coords[k] = nc
 	}
 	return coords
@@ -182,7 +182,7 @@ func (da *DataArray[T]) takeAlong(dim string, indices []int) (*DataArray[T], err
 			coords[k] = nc
 			continue
 		}
-		nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+		nc := cv.cloneVar()
 		coords[k] = nc
 	}
 	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, nil
@@ -204,10 +204,10 @@ func (da *DataArray[T]) binary(other *DataArray[T], fn func(x, y T) T) (*DataArr
 	coords := make(map[string]*Variable[T], len(nv.dims))
 	for _, dim := range nv.dims {
 		if cv, ok := a.coords[dim]; ok {
-			nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+			nc := cv.cloneVar()
 			coords[dim] = nc
 		} else if cv, ok := b.coords[dim]; ok {
-			nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+			nc := cv.cloneVar()
 			coords[dim] = nc
 		}
 	}

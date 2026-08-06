@@ -50,7 +50,7 @@ func NewDataset[T Number](vars map[string]*DataArray[T]) (*Dataset[T], error) {
 					return nil, fmt.Errorf("xarray: coordonnées %q incohérentes entre variables", dim)
 				}
 			} else {
-				nc, _ := NewVariable(cv.Dims(), cv.Shape(), cv.Data())
+				nc := cv.cloneVar()
 				ds.coords[dim] = nc
 			}
 		}

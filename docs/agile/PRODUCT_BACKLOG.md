@@ -49,4 +49,4 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 |-------|-------|------|
 | T-01  | Généraliser le type de données (generics) au-delà de `float64`. | P2 — ✅ Fait (S5) |
 | T-02  | Mesure de couverture de tests en intégration continue. | P1 |
-| T-03  | Benchmarks de performance. | P2 |
+| T-03  | Benchmarks de performance. | P2 — ✅ Fait (S7) |
