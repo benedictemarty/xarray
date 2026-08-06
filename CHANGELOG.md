@@ -7,6 +7,11 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.5.0] — 2026-08-06
+
+Cinquième version : prise en charge du format **Zarr v2** (arrays et Datasets en
+groupes), avec interopérabilité **vérifiée** avec zarr-python dans les deux sens.
+
 ### Ajouté (Sprint 25 — Dataset comme groupe Zarr)
 
 - **`WriteDatasetZarr` / `ReadDatasetZarr`** : un `Dataset[float64]` est stocké
