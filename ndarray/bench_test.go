@@ -33,6 +33,19 @@ func BenchmarkAddSmall(b *testing.B) {
 	}
 }
 
+func BenchmarkAddInto1M(b *testing.B) {
+	// In-place : destination réutilisée -> aucune allocation par opération.
+	a := grille(1000)
+	c := grille(1000)
+	dst := Zeros(1000, 1000)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := AddInto(dst, a, c); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkSumAxis(b *testing.B) {
 	a := grille(1000)
 	b.ResetTimer()

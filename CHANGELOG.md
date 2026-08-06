@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Performances (Sprint 16 — API in-place `ndarray`)
+
+- **Opérations in-place** (`AddInto`, `SubInto`, `MulInto`, `DivInto`,
+  `AddInPlace`, `EmptyLike`) : le résultat est écrit dans un `dst` fourni →
+  **zéro allocation**.
+- Résout le vrai goulot identifié au Sprint 15/cgo (l'allocation, pas le calcul) :
+  `Add` 1000×1000 passe de 1632 µs (8 Mo alloués) à **856 µs (0 alloc)**, soit
+  **1,17× de NumPy pur** (733 µs) au lieu de 2,2×. Obtenu en **Go pur**, sans cgo.
+- Tests : correctness des `*Into`, immutabilité des opérandes, accumulation,
+  forme de destination invalide.
+
 ### Ajouté (Sprint 15 — Paquet `ndarray`, moteur « mini-NumPy »)
 
 - **Nouveau paquet `ndarray`** : tableau dense N-D `float64` spécialisé (sans

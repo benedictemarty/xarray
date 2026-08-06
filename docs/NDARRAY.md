@@ -49,6 +49,34 @@ Pourquoi, une fois de plus :
    passante mémoire, pas par le calcul — le SIMD n'aide plus, mais NumPy garde
    l'avantage grâce à un allocateur et des boucles plus serrés.
 
+## API in-place : rejoindre NumPy sur le memory-bound
+
+Les benchmarks ont montré que le coût de `Add` sur gros tableau est dominé par
+l'**allocation** du résultat (`make` zéro-initialise 8 Mo), pas par le calcul. Les
+opérations **in-place** (`AddInto`, `SubInto`, `MulInto`, `DivInto`,
+`AddInPlace`) écrivent dans un `dst` fourni, donc **zéro allocation** :
+
+| `Add` 1000×1000 | Temps | Allocations |
+|-----------------|-------|-------------|
+| `Add` (alloue le résultat) | 1632 µs | 8 Mo, 4 allocs |
+| **`AddInto` (in-place)** | **856 µs** | **0 B, 0 alloc** |
+| NumPy pur | 733 µs | — |
+
+**Résultat : en réutilisant le buffer de destination, on passe de 2,2× à 1,17× de
+NumPy** — soit ~17 % d'écart résiduel (probablement le SIMD de NumPy sur une
+boucle memory-bound). L'allocation était bien le vrai goulot, et il se règle en
+**Go pur, sans dépendance ni cgo**.
+
+Usage typique (réutiliser `dst` dans une boucle) :
+
+```go
+dst := ndarray.Zeros(1000, 1000)
+for _, b := range lots {
+    _ = ndarray.AddInto(dst, a, b) // aucune allocation par itération
+    // ... consommer dst ...
+}
+```
+
 ## Ce que `ndarray` apporte réellement
 
 Pas la victoire sur NumPy (impossible en Go idiomatique), mais :
