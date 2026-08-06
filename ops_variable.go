@@ -1,6 +1,10 @@
 package xarray
 
-import "fmt"
+import (
+	"fmt"
+	"runtime"
+	"sync"
+)
 
 // Transpose renvoie une nouvelle Variable dont les axes sont réordonnés selon
 // newDims. newDims doit être une permutation des dimensions courantes.
@@ -231,24 +235,72 @@ func binaryOp[T Number](a, b *Variable[T], fn func(x, y T) T) (*Variable[T], err
 		bSt[i] = bStrides[d]
 	}
 
-	counter := make([]int, len(resDims))
-	for flat := range out.data {
-		flatA, flatB := 0, 0
-		for i := range resDims {
-			flatA += counter[i] * aSt[i]
-			flatB += counter[i] * bSt[i]
-		}
-		out.data[flat] = fn(a.data[flatA], b.data[flatB])
+	resStrides := out.strides()
 
-		for k := len(resDims) - 1; k >= 0; k-- {
+	// Au-delà d'un seuil, on répartit le remplissage sur plusieurs cœurs : chaque
+	// travailleur écrit une plage disjointe de out.data (aucune course de données).
+	const seuilParallele = 1 << 15
+	size := len(out.data)
+	if size >= seuilParallele {
+		nw := runtime.GOMAXPROCS(0)
+		if nw > size {
+			nw = size
+		}
+		chunk := (size + nw - 1) / nw
+		var wg sync.WaitGroup
+		for w := 0; w < nw; w++ {
+			lo := w * chunk
+			if lo >= size {
+				break
+			}
+			hi := lo + chunk
+			if hi > size {
+				hi = size
+			}
+			wg.Add(1)
+			go func(lo, hi int) {
+				defer wg.Done()
+				fillBinaryRange(out.data, a.data, b.data, fn, aSt, bSt, resShape, resStrides, lo, hi)
+			}(lo, hi)
+		}
+		wg.Wait()
+		return out, nil
+	}
+
+	fillBinaryRange(out.data, a.data, b.data, fn, aSt, bSt, resShape, resStrides, 0, size)
+	return out, nil
+}
+
+// fillBinaryRange remplit out[lo:hi] en itérant de façon incrémentale sur les
+// indices multidimensionnels. flatA/flatB sont maintenus par pas (O(1) amorti)
+// plutôt que recalculés à chaque élément ; leur état initial est reconstruit à
+// partir de lo via les strides du résultat.
+func fillBinaryRange[T Number](out, adata, bdata []T, fn func(x, y T) T, aSt, bSt, resShape, resStrides []int, lo, hi int) {
+	n := len(resShape)
+	counter := make([]int, n)
+	flatA, flatB := 0, 0
+	rem := lo
+	for i := 0; i < n; i++ {
+		counter[i] = rem / resStrides[i]
+		rem %= resStrides[i]
+		flatA += counter[i] * aSt[i]
+		flatB += counter[i] * bSt[i]
+	}
+
+	for flat := lo; flat < hi; flat++ {
+		out[flat] = fn(adata[flatA], bdata[flatB])
+		for k := n - 1; k >= 0; k-- {
 			counter[k]++
+			flatA += aSt[k]
+			flatB += bSt[k]
 			if counter[k] < resShape[k] {
 				break
 			}
 			counter[k] = 0
+			flatA -= aSt[k] * resShape[k]
+			flatB -= bSt[k] * resShape[k]
 		}
 	}
-	return out, nil
 }
 
 // strideByDim associe à chaque nom de dimension son stride (ordre C).

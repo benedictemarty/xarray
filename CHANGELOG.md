@@ -7,6 +7,20 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Performances & vérification (Sprint 13 — Calcul vectoriel)
+
+- **Itération incrémentale** dans `binaryOp` : `flatA`/`flatB` maintenus par pas
+  (O(1) amorti) au lieu d'un recalcul O(ndim) par élément.
+- **Parallélisation multi-cœurs** du calcul élément par élément au-delà de 32 768
+  éléments (plages disjointes, sans course de données).
+- Effet sur `Broadcast` : 284 µs → **160 µs** (40 k éléments) ; l'écart avec
+  NumPy tombe de 2,7× à 1,3×. NumPy reste devant sur le très gros débit (SIMD).
+- **Vérification d'équivalence des résultats** : `bench/crosscheck.py` (génère
+  `bench/expected.json` via xarray) + test `TestEquivalenceAvecXarray`. Confirme
+  que xarray-go et xarray produisent des valeurs identiques (tolérance 1e-9) pour
+  add, broadcast, réductions, jointure externe, groupby.
+- `docs/BENCHMARKS.md` : section « Pourquoi Go n'a pas d'auto-vectorisation SIMD ».
+
 ### Ajouté (Sprint 12 — concat / stack)
 
 - **`Concat(arrays, dim)`** : concaténation le long d'une dimension existante ;

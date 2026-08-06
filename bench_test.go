@@ -65,6 +65,18 @@ func BenchmarkBroadcast(b *testing.B) {
 	}
 }
 
+func BenchmarkBroadcastLarge(b *testing.B) {
+	// 1000 x 1000 = 1 M éléments : au-delà du seuil de parallélisation.
+	x, _ := NewDataArray([]string{"x"}, []int{1000}, make([]float64, 1000), nil, "x")
+	y, _ := NewDataArray([]string{"y"}, []int{1000}, make([]float64, 1000), nil, "y")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := x.Add(y); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkClone(b *testing.B) {
 	a := grille2D(100)
 	b.ResetTimer()

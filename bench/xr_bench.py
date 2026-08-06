@@ -52,6 +52,12 @@ def bench_broadcast():
     return mesure(lambda: (x + y))
 
 
+def bench_broadcast_large():
+    x = xr.DataArray(np.zeros(1000), dims=("x",))
+    y = xr.DataArray(np.zeros(1000), dims=("y",))
+    return mesure(lambda: (x + y))
+
+
 def bench_sumaxis():
     a = grille(100)
     return mesure(lambda: a.sum(dim="x"))
@@ -76,6 +82,7 @@ def bench_groupby_sum():
 BENCHES = {
     "Add": bench_add,
     "Broadcast": bench_broadcast,
+    "BroadcastLarge": bench_broadcast_large,
     "SumAxis": bench_sumaxis,
     "MeanAxis": bench_meanaxis,
     "GroupBySum": bench_groupby_sum,
