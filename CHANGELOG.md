@@ -7,6 +7,20 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Performances (Sprint 14 — SIMD et chemin direct float64)
+
+- **Noyau SIMD AVX** en assembleur (`simd_amd64.s`) : addition `float64` via
+  `VADDPD`/YMM déroulé ×4, détection AVX au runtime (`CPUID`/`XGETBV`), repli
+  pur-Go. **Conclusion mesurée : le compilateur Go bat ce noyau** (77 vs 30 Go/s)
+  car l'opération est memory-bound — le SIMD n'est donc pas branché sur `Add`.
+- **Chemin direct `Add` (float64, formes identiques)** sans closure générique :
+  la closure `func(T,T) T` du chemin générique n'étant pas inlinée (un appel par
+  élément), l'éviter accélère `Add` d'un ordre de grandeur.
+  - `Add` 100×100 : 48 µs → **18 µs** (13× plus rapide que NumPy).
+  - `Add` 1000×1000 : 3,58 ms → **1,63 ms** (NumPy reste 1,4× devant :
+    zéro-initialisation de l'allocateur Go + SIMD).
+- `docs/BENCHMARKS.md` : section « Bat-on NumPy ? » et expérience SIMD chiffrée.
+
 ### Performances & vérification (Sprint 13 — Calcul vectoriel)
 
 - **Itération incrémentale** dans `binaryOp` : `flatA`/`flatB` maintenus par pas

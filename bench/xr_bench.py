@@ -58,6 +58,13 @@ def bench_broadcast_large():
     return mesure(lambda: (x + y))
 
 
+def bench_add_large():
+    # Addition même forme, 1000x1000 (memory-bound, sans broadcasting).
+    a = grille(1000)
+    c = grille(1000)
+    return mesure(lambda: (a + c))
+
+
 def bench_sumaxis():
     a = grille(100)
     return mesure(lambda: a.sum(dim="x"))
@@ -81,6 +88,7 @@ def bench_groupby_sum():
 
 BENCHES = {
     "Add": bench_add,
+    "AddLarge": bench_add_large,
     "Broadcast": bench_broadcast,
     "BroadcastLarge": bench_broadcast_large,
     "SumAxis": bench_sumaxis,

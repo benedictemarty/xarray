@@ -20,12 +20,31 @@ identiques.
 
 | Opération | Taille | xarray-go | xarray (Python) | Rapport | Gagnant |
 |-----------|--------|-----------|-----------------|---------|---------|
-| `Add` (élément par élément) | 100×100 | **48 µs** | 222 µs | 4,6× | **Go** |
+| `Add` (aligné) | 100×100 | **18 µs** | 232 µs | 13× | **Go** |
+| `Add` (aligné) grand | 1000×1000 | 1627 µs | **1172 µs** | 1,4× | Python |
 | `Broadcast` (par nom) | 200×200 | 160 µs | **120 µs** | 1,3× | Python |
 | `Broadcast` grand | 1000×1000 | 2452 µs | **970 µs** | 2,5× | Python |
 | `SumAxis` (réduction) | 100×100 | **14 µs** | 75 µs | 5,5× | **Go** |
 | `MeanAxis` (réduction) | 100×100 | **15 µs** | 69 µs | 4,7× | **Go** |
 | `GroupBy.Sum` | 1000×10, 10 groupes | **137 µs** | 1671 µs | 12× | **Go** |
+
+### Bat-on NumPy ? (réponse directe)
+
+**Cela dépend du régime :**
+
+- **Petites et moyennes tailles, réductions, `groupby`, arithmétique alignée** →
+  **oui, xarray-go gagne**, souvent d'un ordre de grandeur (4×–13×). L'overhead
+  Python/pandas de xarray y est écrasant.
+- **Débit brut sur des millions d'éléments (`Add`/`Broadcast` grands)** → **non,
+  NumPy reste devant** (1,4×–2,5×). Trois raisons structurelles :
+  1. **SIMD** : les noyaux C de NumPy traitent 4–8 `float64` par instruction ;
+  2. **Allocateur Go** : `make([]float64, n)` **zéro-initialise** le résultat, soit
+     une écriture de 8 Mo « perdue » avant de le remplir (NumPy alloue sans
+     zéro) ;
+  3. **Pas d'auto-vectorisation** du compilateur Go (voir ci-dessous).
+
+En clair : xarray-go gagne sur la **majorité des opérations réalistes**, mais pas
+sur le pur *streaming* numérique à grande échelle, qui reste le terrain de NumPy.
 
 ## Lecture des résultats
 
@@ -106,6 +125,34 @@ Ce qui reste possible côté Go (par ordre d'effort) :
 En clair : l'écart sur le pur débit vectoriel n'est pas un défaut de notre code
 mais une différence d'outillage (compilateur + noyaux SIMD). Il se comble avec de
 l'assembleur, au prix de la simplicité.
+
+### Expérience : un noyau AVX écrit à la main (Sprint 14)
+
+Nous avons **effectivement écrit** un noyau SIMD en assembleur Plan 9
+(`simd_amd64.s`) : addition de `float64` avec `VADDPD` sur registres YMM (4
+`float64` par instruction), déroulé ×4, avec détection AVX au runtime
+(`CPUID`/`XGETBV`) et repli pur-Go. Résultat mesuré sur le **noyau isolé** (8192
+`float64`, en cache) :
+
+| Noyau `addFloat64` | Temps | Débit (SetBytes) |
+|--------------------|-------|------------------|
+| **Boucle Go idiomatique** | **856 ns** | **77 Go/s** |
+| AVX manuel (déroulé ×4) | 2199 ns | 30 Go/s |
+
+**Conclusion contre-intuitive mais mesurée : le code généré par le compilateur Go
+bat notre assembleur AVX** (2,6×). La boucle scalaire Go atteint la bande
+passante du cache L1/L2 (~220 Go/s de trafic réel), alors que notre noyau naïf ne
+l'atteint pas — l'opération est **memory-bound**, régime où le SIMD n'aide pas.
+
+Décision d'ingénierie : **ne pas router `Add` vers ce noyau** (ce serait plus
+lent). Le code assembleur est conservé, testé et *benchmarké* comme expérience
+documentée. Battre le compilateur exigerait le niveau d'optimisation de gonum
+(alignement, FMA, *streaming stores*, *prefetch*) — et surtout des opérations
+**compute-bound** (ex. `exp`, `sqrt`, produits combinés), pas une simple addition
+limitée par la mémoire.
+
+Reproduire : `go test -bench=AddFloat64Kernel ./...` (AVX) vs
+`go test -tags noasm -bench=AddFloat64Kernel ./...` (pur Go).
 
 ## Vérification d'équivalence des résultats
 

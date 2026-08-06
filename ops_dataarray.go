@@ -220,8 +220,55 @@ func (da *DataArray[T]) binary(other *DataArray[T], fn func(x, y T) T) (*DataArr
 }
 
 // Add renvoie da + other (avec alignement et broadcasting).
+//
+// Optimisation : pour le cas fréquent « float64, mêmes dimensions après
+// alignement », on utilise une addition directe (addFloat64) sans closure. Le
+// chemin générique passe par une closure func(T,T) T qui n'est pas inlinée (un
+// appel par élément) ; l'éviter accélère l'opération d'un ordre de grandeur sur
+// les grands tableaux (voir docs/BENCHMARKS.md).
 func (da *DataArray[T]) Add(other *DataArray[T]) (*DataArray[T], error) {
+	if r, ok, err := da.addFast(other); err != nil {
+		return nil, err
+	} else if ok {
+		return r, nil
+	}
 	return da.binary(other, func(x, y T) T { return x + y })
+}
+
+// addFast : chemin rapide float64 à formes identiques (sans closure). Renvoie
+// ok=false pour signaler le repli sur le chemin générique (autre type, ou
+// broadcasting requis).
+func (da *DataArray[T]) addFast(other *DataArray[T]) (*DataArray[T], bool, error) {
+	if _, ok := any(da.variable.data).([]float64); !ok {
+		return nil, false, nil
+	}
+	a, b, err := align(da, other)
+	if err != nil {
+		return nil, false, err
+	}
+	if !sameDimsShape(a.variable, b.variable) {
+		return nil, false, nil
+	}
+	ad := any(a.variable.data).([]float64)
+	bd := any(b.variable.data).([]float64)
+	dst := make([]float64, len(ad))
+	addFloat64(dst, ad, bd)
+
+	nv := &Variable[T]{
+		dims:  a.variable.Dims(),
+		shape: a.variable.Shape(),
+		data:  any(dst).([]T),
+		attrs: map[string]string{},
+	}
+	coords := make(map[string]*Variable[T], len(nv.dims))
+	for _, dim := range nv.dims {
+		if cv, ok := a.coords[dim]; ok {
+			coords[dim] = cv.cloneVar()
+		} else if cv, ok := b.coords[dim]; ok {
+			coords[dim] = cv.cloneVar()
+		}
+	}
+	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, true, nil
 }
 
 // Sub renvoie da - other.
