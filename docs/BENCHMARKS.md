@@ -18,57 +18,52 @@ identiques.
 
 ## Résultats (temps par opération, plus bas = mieux)
 
-| Opération | Taille | xarray-go | xarray (Python) | Rapport | Gagnant |
-|-----------|--------|-----------|-----------------|---------|---------|
-| `Add` (aligné) | 100×100 | **18 µs** | 232 µs | 13× | **Go** |
-| `Add` (aligné) grand | 1000×1000 | 1627 µs | **1172 µs** | 1,4× | Python |
-| `Broadcast` (par nom) | 200×200 | 160 µs | **120 µs** | 1,3× | Python |
-| `Broadcast` grand | 1000×1000 | 2452 µs | **970 µs** | 2,5× | Python |
-| `SumAxis` (réduction) | 100×100 | **14 µs** | 75 µs | 5,5× | **Go** |
-| `MeanAxis` (réduction) | 100×100 | **15 µs** | 69 µs | 4,7× | **Go** |
-| `GroupBy.Sum` | 1000×10, 10 groupes | **137 µs** | 1671 µs | 12× | **Go** |
+Trois références, médianes (Go : `-count=6` ; Python : calibrage adaptatif) :
 
-### Bat-on NumPy ? (réponse directe)
+| Opération | Taille | xarray-go | **NumPy pur** | xarray |
+|-----------|--------|-----------|---------------|--------|
+| `Add` (aligné) | 100×100 | 19 µs | **4,2 µs** | 225 µs |
+| `Add` (aligné) grand | 1000×1000 | 1801 µs | **733 µs** | 1088 µs |
+| `Broadcast` | 200×200 | 184 µs | **34 µs** | 125 µs |
+| `Broadcast` grand | 1000×1000 | 2650 µs | **855 µs** | 1000 µs |
+| `SumAxis` | 100×100 | 15 µs | **3,2 µs** | 76 µs |
+| `MeanAxis` | 100×100 | 15 µs | **4,7 µs** | 73 µs |
+| `GroupBy.Sum` | contigu | 173 µs | **0,6 µs**¹ | 732 µs |
 
-**Cela dépend du régime :**
+¹ `np.add.reduceat` sur des groupes déjà contigus — cas trivial, pas un `groupby`
+général ; comparaison indicative seulement.
 
-- **Petites et moyennes tailles, réductions, `groupby`, arithmétique alignée** →
-  **oui, xarray-go gagne**, souvent d'un ordre de grandeur (4×–13×). L'overhead
-  Python/pandas de xarray y est écrasant.
-- **Débit brut sur des millions d'éléments (`Add`/`Broadcast` grands)** → **non,
-  NumPy reste devant** (1,4×–2,5×). Trois raisons structurelles :
-  1. **SIMD** : les noyaux C de NumPy traitent 4–8 `float64` par instruction ;
-  2. **Allocateur Go** : `make([]float64, n)` **zéro-initialise** le résultat, soit
-     une écriture de 8 Mo « perdue » avant de le remplir (NumPy alloue sans
-     zéro) ;
-  3. **Pas d'auto-vectorisation** du compilateur Go (voir ci-dessous).
+### Bat-on NumPy ? (réponse honnête)
 
-En clair : xarray-go gagne sur la **majorité des opérations réalistes**, mais pas
-sur le pur *streaming* numérique à grande échelle, qui reste le terrain de NumPy.
+**Non.** Face au **moteur de calcul réel (NumPy pur, C + SIMD), xarray-go est plus
+lent partout** — d'un facteur ~2× à ~5× sur l'arithmétique et les réductions.
 
-## Lecture des résultats
+Ce qui est vrai, c'est que **xarray-go est plus rapide que la _couche_ xarray**
+(qui empile un lourd overhead d'objets Python sur NumPy). Autrement dit :
 
-xarray-go gagne désormais **4 opérations sur 5** :
+```
+NumPy pur   <   xarray-go   <   xarray
+(le plus rapide)            (le plus lent)
+```
 
-- **xarray-go gagne sur les réductions, le `groupby` et l'arithmétique alignée**
-  (4,6×–12×). Le coût de xarray y est dominé par l'**overhead Python** (création
-  d'objets, dispatch dynamique, passage par pandas pour `groupby`). Pour `Add`,
-  l'optimisation de l'alignement (voir Sprint 11 : les coordonnées identiques ne
-  sont plus recopiées) a fait passer l'opération de 272 µs à 48 µs.
+xarray-go **élimine l'overhead Python de xarray**, mais **n'atteint pas le moteur
+NumPy**. Les gros ratios « ×13 » d'une version précédente de ce document
+comparaient Go à xarray et non à NumPy : c'était **trompeur** et a été corrigé.
 
-- **NumPy garde l'avantage sur `Broadcast`** — le seul cas restant. C'est du
-  calcul élément par élément pur, **sans coordonnées** (rien à optimiser côté
-  alignement). Après itération incrémentale (O(1) amorti par élément) et
-  parallélisation multi-cœurs (Sprint 13), l'écart est tombé de 2,7× à **1,3×**
-  sur 40 000 éléments, mais NumPy reste devant (**2,5×** sur 1 M) : ses boucles C
-  **vectorisées SIMD** traitent plusieurs valeurs par instruction, là où Go
-  exécute une closure scalaire par élément. C'est un écart structurel (voir plus
-  bas « Pourquoi pas de SIMD en Go »).
+Pourquoi NumPy pur reste devant :
 
-En résumé :
+1. **SIMD** — noyaux C traitant 4–8 `float64` par instruction ;
+2. **Pas d'auto-vectorisation** du compilateur Go (voir plus bas) ;
+3. **Allocateur Go** — `make([]float64, n)` **zéro-initialise** le résultat (une
+   écriture de 8 Mo « perdue » avant remplissage ; NumPy alloue sans zéro).
 
-- **Latence, orchestration, réductions, arithmétique alignée** → avantage **Go**.
-- **Débit vectoriel brut sur gros tableaux sans coordonnées** → avantage **NumPy**.
+### Où se situe réellement l'intérêt de xarray-go
+
+Pas dans le débit de calcul brut (terrain de NumPy), mais dans : le **typage
+statique**, l'**absence de runtime Python**, la **latence** (pas d'overhead
+d'interpréteur), et le déploiement (binaire unique). Pour rivaliser sur le
+**calcul**, il faudrait un moteur de tableaux dense de niveau NumPy — d'où le
+chantier « porter NumPy en Go » (voir `docs/NDARRAY.md`).
 
 ## Pistes d'amélioration côté Go
 
