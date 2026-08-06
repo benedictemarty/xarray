@@ -64,7 +64,21 @@ type zattrsMeta struct {
 // Zarr v2. chunks donne la taille de chunk par dimension (même longueur que la
 // forme). comp choisit la compression des chunks.
 func WriteDataArrayZarr(dir string, da *DataArray[float64], chunks []int, comp ZarrCompression) error {
-	shape := da.variable.Shape()
+	coords := map[string][]float64{}
+	for k, cv := range da.coords {
+		coords[k] = cv.Data()
+	}
+	if len(coords) == 0 {
+		coords = nil
+	}
+	return writeZarrArrayInternal(dir, da.variable.Dims(), da.variable.Shape(), da.variable.data, da.name, coords, chunks, comp)
+}
+
+// writeZarrArrayInternal écrit un array Zarr v2 dans dir. coords peut être nil
+// (cas d'un array « nu » dans un groupe, où les coordonnées sont des arrays
+// séparés) ou porter les coordonnées d'un DataArray autonome (stockées en
+// `.zattrs`).
+func writeZarrArrayInternal(dir string, dims []string, shape []int, data []float64, name string, coords map[string][]float64, chunks []int, comp ZarrCompression) error {
 	if len(chunks) != len(shape) {
 		return fmt.Errorf("xarray: %d taille(s) de chunk pour %d dimension(s)", len(chunks), len(shape))
 	}
@@ -91,14 +105,10 @@ func WriteDataArrayZarr(dir string, da *DataArray[float64], chunks []int, comp Z
 	}
 
 	// .zattrs
-	coords := map[string][]float64{}
-	for k, cv := range da.coords {
-		coords[k] = cv.Data()
-	}
 	if len(coords) == 0 {
 		coords = nil
 	}
-	attrs := zattrsMeta{Dims: da.variable.Dims(), Name: da.name, Coords: coords}
+	attrs := zattrsMeta{Dims: dims, Name: name, Coords: coords}
 	if err := writeJSONFile(filepath.Join(dir, ".zattrs"), attrs); err != nil {
 		return err
 	}
@@ -109,7 +119,7 @@ func WriteDataArrayZarr(dir string, da *DataArray[float64], chunks []int, comp Z
 	for d := 0; d < ndim; d++ {
 		nchunks[d] = (shape[d] + chunks[d] - 1) / chunks[d]
 	}
-	dataStrides := da.variable.strides()
+	dataStrides := cOrderStrides(shape)
 	chunkStrides := cOrderStrides(chunks)
 	chunkSize := product(chunks)
 
@@ -133,7 +143,7 @@ func WriteDataArrayZarr(dir string, da *DataArray[float64], chunks []int, comp Z
 				for d := 0; d < ndim; d++ {
 					flatLocal += local[d] * chunkStrides[d]
 				}
-				buf[flatLocal] = da.variable.data[flatGlobal]
+				buf[flatLocal] = data[flatGlobal]
 			}
 			incrementCounter(local, chunks)
 		}
@@ -151,28 +161,38 @@ func WriteDataArrayZarr(dir string, da *DataArray[float64], chunks []int, comp Z
 
 // ReadDataArrayZarr lit un DataArray[float64] depuis un store Zarr v2 (dir).
 func ReadDataArrayZarr(dir string) (*DataArray[float64], error) {
-	var meta zarrayMeta
-	if err := readJSONFile(filepath.Join(dir, ".zarray"), &meta); err != nil {
+	dims, shape, data, name, coords, err := readZarrArrayInternal(dir)
+	if err != nil {
 		return nil, err
 	}
+	return NewDataArray(dims, shape, data, coords, name)
+}
+
+// readZarrArrayInternal lit un array Zarr v2 et renvoie ses composants bruts
+// (dimensions, forme, données, nom, coordonnées éventuelles issues de `.zattrs`).
+func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float64, name string, coords map[string][]float64, err error) {
+	var meta zarrayMeta
+	if err = readJSONFile(filepath.Join(dir, ".zarray"), &meta); err != nil {
+		return nil, nil, nil, "", nil, err
+	}
 	if meta.ZarrFormat != 2 {
-		return nil, fmt.Errorf("xarray: seul Zarr v2 est pris en charge (format %d)", meta.ZarrFormat)
+		return nil, nil, nil, "", nil, fmt.Errorf("xarray: seul Zarr v2 est pris en charge (format %d)", meta.ZarrFormat)
 	}
 	if meta.Dtype != "<f8" {
-		return nil, fmt.Errorf("xarray: seul le dtype \"<f8\" (float64) est pris en charge (%q)", meta.Dtype)
+		return nil, nil, nil, "", nil, fmt.Errorf("xarray: seul le dtype \"<f8\" (float64) est pris en charge (%q)", meta.Dtype)
 	}
 	if meta.Order != "" && meta.Order != "C" {
-		return nil, fmt.Errorf("xarray: seul l'ordre C est pris en charge (%q)", meta.Order)
+		return nil, nil, nil, "", nil, fmt.Errorf("xarray: seul l'ordre C est pris en charge (%q)", meta.Order)
 	}
 	comp := ZarrNone
 	if meta.Compressor != nil {
 		if meta.Compressor.ID != "zlib" {
-			return nil, fmt.Errorf("xarray: compresseur %q non pris en charge (aucun ou zlib)", meta.Compressor.ID)
+			return nil, nil, nil, "", nil, fmt.Errorf("xarray: compresseur %q non pris en charge (aucun ou zlib)", meta.Compressor.ID)
 		}
 		comp = ZarrZlib
 	}
 
-	shape := meta.Shape
+	shape = meta.Shape
 	chunks := meta.Chunks
 	ndim := len(shape)
 	fill := 0.0
@@ -180,7 +200,7 @@ func ReadDataArrayZarr(dir string) (*DataArray[float64], error) {
 		fill = *meta.FillValue
 	}
 
-	data := make([]float64, product(shape))
+	data = make([]float64, product(shape))
 	if fill != 0 {
 		for i := range data {
 			data[i] = fill
@@ -197,9 +217,9 @@ func ReadDataArrayZarr(dir string) (*DataArray[float64], error) {
 
 	coord := make([]int, ndim)
 	for done := false; !done; {
-		buf, ok, err := readChunk(dir, coord, chunkSize, comp)
-		if err != nil {
-			return nil, err
+		buf, ok, rerr := readChunk(dir, coord, chunkSize, comp)
+		if rerr != nil {
+			return nil, nil, nil, "", nil, rerr
 		}
 		if ok {
 			local := make([]int, ndim)
@@ -232,10 +252,10 @@ func ReadDataArrayZarr(dir string) (*DataArray[float64], error) {
 	}
 
 	var attrs zattrsMeta
-	if err := readJSONFile(filepath.Join(dir, ".zattrs"), &attrs); err != nil {
-		return nil, err
+	if err = readJSONFile(filepath.Join(dir, ".zattrs"), &attrs); err != nil {
+		return nil, nil, nil, "", nil, err
 	}
-	dims := attrs.Dims
+	dims = attrs.Dims
 	if len(dims) != ndim {
 		// Repli : dimensions anonymes si .zattrs incomplet.
 		dims = make([]string, ndim)
@@ -243,7 +263,7 @@ func ReadDataArrayZarr(dir string) (*DataArray[float64], error) {
 			dims[i] = "dim_" + strconv.Itoa(i)
 		}
 	}
-	return NewDataArray(dims, shape, data, attrs.Coords, attrs.Name)
+	return dims, shape, data, attrs.Name, attrs.Coords, nil
 }
 
 // --- Helpers ----------------------------------------------------------------

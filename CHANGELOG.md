@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 25 — Dataset comme groupe Zarr)
+
+- **`WriteDatasetZarr` / `ReadDatasetZarr`** : un `Dataset[float64]` est stocké
+  comme **groupe Zarr v2** (`.zgroup` + un sous-array par variable et par
+  coordonnée ; coordonnées = arrays 1D nommés comme leur dimension).
+- Refactorisation : lecture/écriture d'array extraites en
+  `writeZarrArrayInternal` / `readZarrArrayInternal`, partagées entre l'API
+  `DataArray` et l'API `Dataset`.
+- **Interop groupe vérifiée** : groupe Go relu par `zarr.open_group`
+  (zarr-python) — arrays et coordonnées identiques. Utilitaire `cmd/genzarrds`.
+
 ### Ajouté (Sprint 24 — Prise en charge de Zarr v2)
 
 - **Lecture/écriture Zarr v2** (`WriteDataArrayZarr`, `ReadDataArrayZarr`) sur
