@@ -7,6 +7,21 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 8 — netCDF, US-16)
+
+- **Support d'un sous-ensemble du format netCDF classique (CDF-1)** :
+  - `Dataset.WriteNetCDF` / `ReadDatasetNetCDF[T]` ;
+  - `DataArray.WriteNetCDF` / `ReadDataArrayNetCDF[T]` (dataset à une variable).
+- Périmètre : dimensions fixes, variables numériques
+  (`NC_DOUBLE`/`NC_FLOAT`/`NC_INT`/`NC_SHORT`/`NC_BYTE`), coordonnées de
+  dimension. Types Go supportés à l'export : `float64`, `float32`, `int32`,
+  `int16`, `int8` (les autres renvoient une erreur explicite).
+- Non couvert (documenté) : NetCDF-4/HDF5, CDF-5, dimensions d'enregistrement
+  illimitées, attributs. L'aller-retour est validé en interne (auto-cohérent),
+  pas encore contre un outil netCDF de référence.
+- Tests : allers-retours `DataArray`/`Dataset` en float64, float32 et int32 ;
+  rejet d'un type non supporté ; signature invalide.
+
 ### Performances (Sprint 7 — T-03)
 
 - **Optimisation de `binaryOp`** (arithmétique/broadcasting) : pré-calcul des

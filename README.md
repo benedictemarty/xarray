@@ -70,8 +70,11 @@ Voir [`docs/agile/ROADMAP.md`](docs/agile/ROADMAP.md) et le
 - **Sprint 1** — Cœur `Variable` / `DataArray` (indexation `isel`/`sel`, réductions) ✅
 - **Sprint 2** — Opérations : broadcasting, alignement, arithmétique, réductions par axe ✅
 - **Sprint 3** — `Dataset` (regroupement, `sel`/`isel` et réductions propagés, fusion) ✅
-- **Sprint 4** — Entrées/sorties : JSON et CSV (aller-retour) ✅ — netCDF reporté
+- **Sprint 4** — Entrées/sorties : JSON et CSV (aller-retour) ✅
 - **Sprint 5** — Généralisation des types (generics `int`/`float32`/`float64`…) ✅
+- **Sprint 6** — Jointures externes (inner/outer/left/right) ✅
+- **Sprint 7** — Benchmarks et optimisations ✅
+- **Sprint 8** — netCDF, sous-ensemble classique CDF-1 (aller-retour) ✅
 
 > Note generics : les constructeurs infèrent le type depuis les données.
 > Les fonctions de lecture demandent un paramètre de type explicite, ex.
@@ -82,14 +85,24 @@ Voir [`docs/agile/ROADMAP.md`](docs/agile/ROADMAP.md) et le
 ```go
 // JSON (DataArray ou Dataset)
 _ = da.WriteJSON(w)
-da2, _ := xarray.ReadDataArrayJSON(r)
+da2, _ := xarray.ReadDataArrayJSON[float64](r)
 _ = ds.WriteJSON(w)
-ds2, _ := xarray.ReadDatasetJSON(r)
+ds2, _ := xarray.ReadDatasetJSON[float64](r)
 
 // CSV « tidy » : une ligne par cellule (colonnes = dimensions + valeur)
 _ = da.WriteCSV(w)
-da3, _ := xarray.ReadDataArrayCSV(r)
+da3, _ := xarray.ReadDataArrayCSV[float64](r)
+
+// netCDF classique (CDF-1), sous-ensemble
+_ = ds.WriteNetCDF(w)
+ds3, _ := xarray.ReadDatasetNetCDF[float64](r)
 ```
+
+> Limites netCDF : sous-ensemble du format classique (CDF-1) — pas de
+> NetCDF-4/HDF5, ni records illimités, ni attributs. Types exportables :
+> `float64`, `float32`, `int32`, `int16`, `int8`. L'aller-retour est validé en
+> interne ; l'interopérabilité avec les outils netCDF de référence reste à
+> confirmer.
 
 Exemple de CSV produit pour un tableau `température(temps, lieu)` :
 
