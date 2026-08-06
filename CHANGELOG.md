@@ -7,6 +7,15 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 12 — concat / stack)
+
+- **`Concat(arrays, dim)`** : concaténation le long d'une dimension existante ;
+  coordonnée de la dimension concaténée = concaténation des coordonnées.
+- **`Stack(arrays, newDim, labels)`** : empilement sur une nouvelle dimension en
+  tête (expose la primitive `stackDim`).
+- Tests : concat 1D, 2D (axe 0 et axe 1 avec entrelacement), erreurs ; stack et
+  erreurs.
+
 ### Performances (Sprint 11 — Alignement)
 
 - **`align` — chemin rapide « coordonnées identiques »** : lorsqu'une dimension
