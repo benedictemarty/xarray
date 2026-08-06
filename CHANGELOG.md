@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 9 — GroupBy)
+
+- **Regroupement `DataArray.GroupBy(dim)`** par les valeurs (répétées) de la
+  coordonnée d'une dimension, avec agrégations `Sum`, `Mean`, `Min`, `Max`.
+  - `Mean` renvoie du `float64` ; les autres conservent le type `T`.
+  - La dimension groupée est remplacée par ses étiquettes uniques triées ; les
+    autres coordonnées sont conservées.
+- Primitive d'empilement `stackDim` (nouvelle dimension en tête).
+- Accès : `GroupBy.Groups`, `GroupBy.Labels`.
+- Tests : regroupement 1D/2D, min/max, type entier, cas d'erreur.
+
 ## [0.2.0] — 2026-08-06
 
 Deuxième version : jointures externes, optimisations de performance, et support
