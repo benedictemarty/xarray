@@ -84,6 +84,32 @@ func BenchmarkWriteCSV(b *testing.B) {
 	}
 }
 
+func BenchmarkGroupBySum(b *testing.B) {
+	// dim t (1000) avec 10 groupes répétés, dim x (10).
+	n, groupes := 1000, 10
+	data := make([]float64, n*10)
+	for i := range data {
+		data[i] = float64(i)
+	}
+	ts := make([]float64, n)
+	for i := 0; i < n; i++ {
+		ts[i] = float64(i % groupes)
+	}
+	xs := make([]float64, 10)
+	for i := range xs {
+		xs[i] = float64(i)
+	}
+	da, _ := NewDataArray([]string{"t", "x"}, []int{n, 10}, data,
+		map[string][]float64{"t": ts, "x": xs}, "v")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		g, _ := da.GroupBy("t")
+		if _, err := g.Sum(); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkOuterJoin(b *testing.B) {
 	a := grille2D(100)
 	c := grille2D(100)

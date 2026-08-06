@@ -48,7 +48,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | ID    | User story | Prio | État |
 |-------|------------|------|------|
 | US-18 | En tant qu'utilisateur, je veux regrouper (`groupby`) et agréger par valeur de coordonnée. | P1 | ✅ Fait (S9) |
-| US-19 | En tant qu'utilisateur, je veux comparer les performances xarray-go vs xarray (Python). | P2 | 🔜 S10 |
+| US-19 | En tant qu'utilisateur, je veux comparer les performances xarray-go vs xarray (Python). | P2 | ✅ Fait (S10) |
 
 ## Dette / transverse
 

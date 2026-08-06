@@ -177,6 +177,21 @@ func reduceAxisVar[T, R Number](v *Variable[T], dim string, reducer func([]T) R)
 // L'ordre des dimensions du résultat est : celles de a, puis celles de b
 // absentes de a.
 func binaryOp[T Number](a, b *Variable[T], fn func(x, y T) T) (*Variable[T], error) {
+	// Chemin rapide : dimensions identiques (mêmes noms, même ordre, mêmes
+	// tailles) — aucun broadcasting, boucle directe sans calcul d'indices.
+	if sameDimsShape(a, b) {
+		out := &Variable[T]{
+			dims:  a.Dims(),
+			shape: a.Shape(),
+			data:  make([]T, len(a.data)),
+			attrs: map[string]string{},
+		}
+		for i := range a.data {
+			out.data[i] = fn(a.data[i], b.data[i])
+		}
+		return out, nil
+	}
+
 	resDims := append([]string(nil), a.dims...)
 	sizeByDim := make(map[string]int, len(a.dims)+len(b.dims))
 	for i, d := range a.dims {
@@ -244,6 +259,20 @@ func strideByDim[T Number](v *Variable[T]) map[string]int {
 		m[d] = st[i]
 	}
 	return m
+}
+
+// sameDimsShape indique si deux variables ont exactement les mêmes dimensions
+// (noms, ordre) et la même forme.
+func sameDimsShape[T Number](a, b *Variable[T]) bool {
+	if len(a.dims) != len(b.dims) {
+		return false
+	}
+	for i := range a.dims {
+		if a.dims[i] != b.dims[i] || a.shape[i] != b.shape[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func product(shape []int) int {

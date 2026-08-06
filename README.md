@@ -113,6 +113,13 @@ temps,lieu,temperature
 ...
 ```
 
+## Performances
+
+Comparaison mesurée face à xarray (Python/NumPy) — voir
+[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). En résumé : xarray-go domine les
+réductions et le `groupby` (5×–14× plus rapide), tandis que NumPy garde
+l'avantage sur le calcul élément par élément à grande taille (vectorisation).
+
 ## Développement
 
 ```bash

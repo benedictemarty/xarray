@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 10 — Volet performance xarray-go vs xarray Python)
+
+- **Comparaison de performance** documentée (`docs/BENCHMARKS.md`) contre
+  xarray 2026.4.0 / NumPy 2.2.4, sur opérations et tailles identiques.
+- **Harnais Python** `bench/xr_bench.py` (miroir des benchmarks Go, calibrage
+  adaptatif).
+- Benchmark Go `BenchmarkGroupBySum`.
+- **Optimisation `binaryOp`** : chemin rapide « dimensions identiques » (boucle
+  directe sans calcul d'indices), qui rapproche `Add` des performances NumPy
+  (~348 µs → ~250 µs) via `sameDimsShape`.
+- Bilan : Go domine réductions et `groupby` (5×–14×) ; NumPy domine le calcul
+  élément par élément à grande taille (1,2×–2,1×).
+
 ### Ajouté (Sprint 9 — GroupBy)
 
 - **Regroupement `DataArray.GroupBy(dim)`** par les valeurs (répétées) de la
