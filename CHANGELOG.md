@@ -7,6 +7,25 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 4 — Entrées/sorties)
+
+- **JSON (aller-retour)** :
+  - `DataArray` : `WriteJSON`/`ReadDataArrayJSON`, plus `MarshalJSON`/`UnmarshalJSON`
+    (validation à la relecture via `NewDataArray`).
+  - `Dataset` : `WriteJSON`/`ReadDatasetJSON` ; les coordonnées partagées sont
+    réinjectées dans chaque variable à la lecture pour garantir la cohérence.
+- **CSV format « tidy »** (une ligne par cellule : une colonne par dimension puis
+  la valeur) : `DataArray.WriteCSV`/`ReadDataArrayCSV`. Format général (N-D) et
+  sans ambiguïté ; coordonnées reconstruites dans l'ordre d'apparition ; détection
+  des grilles incomplètes.
+- Tests : allers-retours JSON (`DataArray`, `Dataset`) et CSV, contenu exact,
+  cas sans coordonnées, cas d'erreur (CSV vide, en-tête invalide, grille incomplète).
+
+### Reporté
+
+- **netCDF (US-16)** : non implémenté dans cet incrément. Format binaire complexe
+  qui nécessiterait une dépendance externe ; conservé au backlog en priorité P2.
+
 ### Ajouté (Sprint 3 — `Dataset`)
 
 - **Type `Dataset`** : collection de `DataArray` (« variables de données »)

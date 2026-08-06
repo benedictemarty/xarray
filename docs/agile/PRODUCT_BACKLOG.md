@@ -38,9 +38,9 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 
 | ID    | User story | Prio | État |
 |-------|------------|------|------|
-| US-14 | En tant qu'utilisateur, je veux charger/sauver en CSV. | P1 | 🔜 S4 |
-| US-15 | En tant qu'utilisateur, je veux charger/sauver en JSON. | P1 | 🔜 S4 |
-| US-16 | En tant qu'utilisateur, je veux lire/écrire du netCDF. | P2 | 🔜 S4 |
+| US-14 | En tant qu'utilisateur, je veux charger/sauver en CSV. | P1 | ✅ Fait (S4) |
+| US-15 | En tant qu'utilisateur, je veux charger/sauver en JSON. | P1 | ✅ Fait (S4) |
+| US-16 | En tant qu'utilisateur, je veux lire/écrire du netCDF. | P2 | ⏸️ Reporté (dépendance externe) |
 
 ## Dette / transverse
 

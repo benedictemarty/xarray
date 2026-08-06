@@ -69,7 +69,30 @@ Voir [`docs/agile/ROADMAP.md`](docs/agile/ROADMAP.md) et le
 - **Sprint 1** — Cœur `Variable` / `DataArray` (indexation `isel`/`sel`, réductions) ✅
 - **Sprint 2** — Opérations : broadcasting, alignement, arithmétique, réductions par axe ✅
 - **Sprint 3** — `Dataset` (regroupement, `sel`/`isel` et réductions propagés, fusion) ✅
-- **Sprint 4** — Entrées/sorties (CSV, JSON, netCDF)
+- **Sprint 4** — Entrées/sorties : JSON et CSV (aller-retour) ✅ — netCDF reporté
+
+## Entrées / sorties
+
+```go
+// JSON (DataArray ou Dataset)
+_ = da.WriteJSON(w)
+da2, _ := xarray.ReadDataArrayJSON(r)
+_ = ds.WriteJSON(w)
+ds2, _ := xarray.ReadDatasetJSON(r)
+
+// CSV « tidy » : une ligne par cellule (colonnes = dimensions + valeur)
+_ = da.WriteCSV(w)
+da3, _ := xarray.ReadDataArrayCSV(r)
+```
+
+Exemple de CSV produit pour un tableau `température(temps, lieu)` :
+
+```csv
+temps,lieu,temperature
+2020,10,1
+2020,20,2
+...
+```
 
 ## Développement
 

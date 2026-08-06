@@ -35,12 +35,15 @@ Objectif : manipuler des collections cohérentes de variables.
 
 **Statut : terminé.**
 
-## Sprint 4 — Entrées / sorties
+## Sprint 4 — Entrées / sorties ✅
 
 Objectif : interopérer avec des formats de fichiers.
 
-- CSV et JSON (aller-retour).
-- netCDF (lecture/écriture) — exploratoire.
+- JSON (aller-retour) pour `DataArray` et `Dataset`.
+- CSV format « tidy » (aller-retour) pour `DataArray`.
+- netCDF : **reporté** (format binaire complexe, dépendance externe requise).
+
+**Statut : terminé** (hors netCDF, reporté au backlog).
 
 ## Transverse (continu)
 
