@@ -96,7 +96,14 @@ da3, _ := xarray.ReadDataArrayCSV[float64](r)
 // netCDF classique (CDF-1), sous-ensemble
 _ = ds.WriteNetCDF(w)
 ds3, _ := xarray.ReadDatasetNetCDF[float64](r)
+
+// Zarr v2 (chunké, compression none/zlib) — interop zarr-python vérifiée
+_ = xarray.WriteDataArrayZarr("data.zarr", da, []int{2, 3}, xarray.ZarrZlib)
+da4, _ := xarray.ReadDataArrayZarr("data.zarr")
 ```
+
+Voir [`docs/ZARR.md`](docs/ZARR.md) pour le périmètre Zarr et la validation
+d'interopérabilité.
 
 > Limites netCDF : sous-ensemble du format classique (CDF-1) — pas de
 > NetCDF-4/HDF5, ni records illimités, ni attributs. Types exportables :

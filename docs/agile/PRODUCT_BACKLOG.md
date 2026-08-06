@@ -54,6 +54,8 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-22 | En tant qu'utilisateur, je veux des réductions ignorant les NaN (`skipna`). | P1 | ✅ Fait (S17) |
 | US-23 | En tant qu'utilisateur, je veux `Dataset.GroupBy`. | P1 | ✅ Fait (S18) |
 | US-24 | En tant qu'utilisateur, je veux un moteur de calcul dense performant (`ndarray`). | P2 | ✅ Fait (S15-16) |
+| US-25 | En tant qu'utilisateur, je veux lire/écrire du Zarr (v2). | P1 | ✅ Fait (S24) |
+| US-26 | En tant qu'utilisateur, je veux de l'algèbre linéaire et du ML classique. | P2 | ✅ Fait (S22-23) |
 
 ## Dette / transverse
 

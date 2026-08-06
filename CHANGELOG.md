@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 24 — Prise en charge de Zarr v2)
+
+- **Lecture/écriture Zarr v2** (`WriteDataArrayZarr`, `ReadDataArrayZarr`) sur
+  système de fichiers : `DataArray[float64]`, dtype `<f8`, ordre C, chunking (avec
+  `fill_value` pour les bords), compression **none** ou **zlib** (stdlib).
+- Dimensions/nom/coordonnées dans `.zattrs` (`_ARRAY_DIMENSIONS`, convention
+  xarray).
+- **Interopérabilité vérifiée dans les deux sens** avec zarr-python 3.3.0 :
+  Go→Python et Python→Go donnent des données identiques (chunks non alignés +
+  zlib inclus). Utilitaires `cmd/genzarr` et `cmd/readzarr`.
+- Documentation : `docs/ZARR.md`. Périmètre non géré documenté (Zarr v3, autres
+  dtypes, blosc/zstd, groupes/Dataset).
+
 ## [0.4.0] — 2026-08-06
 
 Quatrième version : accélération de l'arithmétique float64 (noyaux directs sans
