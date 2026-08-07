@@ -91,11 +91,13 @@ func writeZarrArrayInternal(dir string, dims []string, shape []int, data []float
 		return err
 	}
 
-	// .zarray
-	fill := 0.0
+	// .zarray — fill_value: null (et non 0). Un fill_value numérique est
+	// interprété par xarray/zarr-python comme _FillValue et masque toutes les
+	// valeurs égales (ici les 0 légitimes deviendraient NaN). null = pas de
+	// masquage ; l'aller-retour reste correct car tous les chunks sont écrits.
 	meta := zarrayMeta{
 		ZarrFormat: 2, Shape: shape, Chunks: chunks, Dtype: "<f8",
-		FillValue: &fill, Order: "C",
+		FillValue: nil, Order: "C",
 	}
 	if comp == ZarrZlib {
 		meta.Compressor = &zarrCompressorMeta{ID: "zlib", Level: 1}

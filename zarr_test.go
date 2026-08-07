@@ -1,11 +1,45 @@
 package xarray
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 )
+
+// TestZarrFillValueNull vérifie que .zarray écrit fill_value: null et non 0.
+// Un fill_value numérique est interprété par xarray/zarr-python comme _FillValue
+// et masque les valeurs égales (les 0 légitimes deviendraient NaN à la lecture).
+func TestZarrFillValueNull(t *testing.T) {
+	// Données contenant explicitement des zéros.
+	da, _ := NewDataArray([]string{"y", "x"}, []int{2, 2},
+		[]float64{0, 1, 0, 2},
+		map[string][]float64{"y": {0, 1}, "x": {0, 1}}, "v")
+	dir := filepath.Join(t.TempDir(), "f.zarr")
+	if err := WriteDataArrayZarr(dir, da, []int{2, 2}, ZarrNone); err != nil {
+		t.Fatalf("WriteDataArrayZarr : %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, ".zarray"))
+	if err != nil {
+		t.Fatalf("lecture .zarray : %v", err)
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("json .zarray : %v", err)
+	}
+	if v, present := m["fill_value"]; !present || v != nil {
+		t.Errorf("fill_value = %v (présent=%v), attendu null", v, present)
+	}
+	// L'aller-retour interne doit préserver les zéros.
+	got, err := ReadDataArrayZarr(dir)
+	if err != nil {
+		t.Fatalf("ReadDataArrayZarr : %v", err)
+	}
+	if !reflect.DeepEqual(got.Data(), []float64{0, 1, 0, 2}) {
+		t.Errorf("Data = %v, attendu [0 1 0 2]", got.Data())
+	}
+}
 
 func TestZarrAllerRetour(t *testing.T) {
 	da, _ := NewDataArray([]string{"temps", "lieu"}, []int{2, 3},

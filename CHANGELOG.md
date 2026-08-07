@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Corrigé (Sprint 62 — Zarr `fill_value`, interop écriture zarr-python)
+
+- **`fill_value` du `.zarray` passé de `0` à `null`.** Un `fill_value` numérique
+  est interprété par xarray/zarr-python comme `_FillValue` : à la relecture, toutes
+  les valeurs égales (les **0 légitimes**) étaient **masquées en NaN**. L'écriture
+  xarray-go produisait donc du Zarr lu à tort par zarr-python (zéros → NaN).
+- Validé empiriquement : `WriteDatasetZarr`/`WriteDataArrayZarr` → relecture par
+  **zarr-python 3.3.0** (xarray Python) → **valeurs exactes**, zéros préservés,
+  sans et avec compression zlib.
+- Test de non-régression `TestZarrFillValueNull` (vérifie `fill_value: null` dans
+  `.zarray` et la préservation des zéros à l'aller-retour interne).
+
 ### Ajouté (Sprint 61 — ouverture NetCDF-4/HDF5 & CDF-2/5 par conversion)
 
 - **`OpenNetCDFFile(path, conv)`** : ouvre un fichier netCDF quel que soit son
