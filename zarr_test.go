@@ -31,6 +31,38 @@ func TestZarrReadIntDtypes(t *testing.T) {
 	}
 }
 
+// TestZarrReadBloscZstd lit un store Blosc dont le codec est zstd (via
+// github.com/klauspost/compress). v[i] = i % 50 sur 2000 valeurs.
+func TestZarrReadBloscZstd(t *testing.T) {
+	da, err := ReadDataArrayZarr("testdata/zarr_blosc_zstd")
+	if err != nil {
+		t.Fatalf("ReadDataArrayZarr (zstd) : %v", err)
+	}
+	d := da.Data()
+	if len(d) != 2000 {
+		t.Fatalf("taille = %d, attendu 2000", len(d))
+	}
+	for i, x := range d {
+		if x != float64(i%50) {
+			t.Fatalf("v[%d] = %v, attendu %d (zstd incorrect)", i, x, i%50)
+		}
+	}
+}
+
+// TestBitUnshuffleRemainder vérifie que le bitshuffle avec nelem non multiple de
+// 8 est refusé par une erreur explicite (cas non pris en charge), plutôt que de
+// produire des données fausses.
+func TestBitUnshuffleRemainder(t *testing.T) {
+	// 100 éléments d'un octet chacun -> nelem = 100, non multiple de 8.
+	if _, err := bitUnshuffle(make([]byte, 100), 1); err == nil {
+		t.Error("erreur attendue : bitshuffle nelem non multiple de 8")
+	}
+	// 64 éléments -> multiple de 8, doit passer.
+	if _, err := bitUnshuffle(make([]byte, 64), 1); err != nil {
+		t.Errorf("nelem multiple de 8 refusé à tort : %v", err)
+	}
+}
+
 // TestZarrReadBloscBitshuffle lit un store Blosc avec filtre bitshuffle
 // (shuffle=2), produit par zarr-python. v[i] = i % 16 sur 16×16.
 func TestZarrReadBloscBitshuffle(t *testing.T) {

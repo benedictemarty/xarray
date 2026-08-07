@@ -6,7 +6,24 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+
+	"github.com/klauspost/compress/zstd"
 )
+
+// zstdDec est un décodeur zstd partagé ; DecodeAll est sûr en usage concurrent.
+var zstdDec, _ = zstd.NewReader(nil)
+
+func zstdDecode(src, dst []byte) error {
+	res, err := zstdDec.DecodeAll(src, dst[:0])
+	if err != nil {
+		return err
+	}
+	if len(res) != len(dst) {
+		return fmt.Errorf("zstd: %d octets décodés, %d attendus", len(res), len(dst))
+	}
+	copy(dst, res)
+	return nil
+}
 
 // Décompression des chunks Zarr. Prend en charge, en pur Go et sans dépendance :
 //   - aucune compression ;
@@ -31,10 +48,13 @@ func newDecompressor(m *zarrCompressorMeta) (decompressor, error) {
 	case "zlib":
 		return zlibDecompress, nil
 	case "blosc":
-		if m.Cname != "" && m.Cname != "lz4" && m.Cname != "blosclz" {
-			return nil, fmt.Errorf("xarray: codec Blosc %q non pris en charge (lz4/blosclz)", m.Cname)
+		cname := m.Cname
+		switch cname {
+		case "", "lz4", "blosclz", "zstd":
+		default:
+			return nil, fmt.Errorf("xarray: codec Blosc %q non pris en charge (lz4/blosclz/zstd)", cname)
 		}
-		return bloscDecompress, nil
+		return func(src []byte) ([]byte, error) { return bloscDecompress(src, cname) }, nil
 	default:
 		return nil, fmt.Errorf("xarray: compresseur %q non pris en charge (aucun, zlib, blosc)", m.ID)
 	}
@@ -51,7 +71,7 @@ func zlibDecompress(src []byte) ([]byte, error) {
 
 // bloscDecompress décode un buffer Blosc (conteneur v1). En-tête (16 octets) :
 // version, versionlz, flags, typesize, nbytes(u32), blocksize(u32), cbytes(u32).
-func bloscDecompress(src []byte) ([]byte, error) {
+func bloscDecompress(src []byte, cname string) ([]byte, error) {
 	if len(src) < 16 {
 		return nil, fmt.Errorf("xarray: en-tête Blosc tronqué (%d octets)", len(src))
 	}
@@ -94,7 +114,7 @@ func bloscDecompress(src []byte) ([]byte, error) {
 			blkLen = nbytes - b*blocksize
 		}
 		block := make([]byte, blkLen)
-		if err := decodeBloscBlock(src[off:], block, typesize, blocksize); err != nil {
+		if err := decodeBloscBlock(src[off:], block, typesize, blocksize, cname); err != nil {
 			return nil, err
 		}
 		switch {
@@ -118,14 +138,15 @@ func bloscDecompress(src []byte) ([]byte, error) {
 // bloc), le dernier sous-flux portant le reliquat ; sinon un seul flux. Chaque
 // sous-flux est préfixé de sa taille compressée (int32) ; s'il vaut sa taille
 // décompressée, il est stocké brut, sinon codé en LZ4.
-func decodeBloscBlock(src, dst []byte, typesize, blocksize int) error {
+func decodeBloscBlock(src, dst []byte, typesize, blocksize int, cname string) error {
 	blkLen := len(dst)
 	const bloscMinBuffer = 128
-	// Blosc ne découpe que les blocs PLEINS (blkLen == blocksize) en `typesize`
-	// sous-flux de blocksize/typesize octets ; un bloc partiel (dernier bloc)
-	// reste un flux unique. Vérifié sur des stores réels multi-blocs.
+	// Seuls les codecs LZ4/BLOSCLZ découpent (et seulement les blocs PLEINS en
+	// `typesize` sous-flux de blocksize/typesize octets). zstd ne découpe pas ;
+	// un bloc partiel (dernier bloc) reste un flux unique. Vérifié sur stores réels.
+	splittable := cname == "" || cname == "lz4" || cname == "blosclz"
 	neblock := blkLen // un seul flux par défaut
-	if blkLen == blocksize && typesize >= 2 && typesize <= 16 && blocksize/typesize >= bloscMinBuffer {
+	if splittable && blkLen == blocksize && typesize >= 2 && typesize <= 16 && blocksize/typesize >= bloscMinBuffer {
 		neblock = blocksize / typesize
 	}
 	sp := 0
@@ -143,11 +164,17 @@ func decodeBloscBlock(src, dst []byte, typesize, blocksize int) error {
 			return fmt.Errorf("xarray: sous-flux Blosc hors bornes (clen=%d)", clen)
 		}
 		out := dst[pos : pos+outLen]
-		if clen == outLen {
-			// Sous-flux incompressible : stocké brut par Blosc.
-			copy(out, src[sp:sp+clen])
-		} else if err := lz4Decompress(src[sp:sp+clen], out); err != nil {
-			return fmt.Errorf("xarray: LZ4 (sous-flux @%d): %w", pos, err)
+		var err error
+		switch {
+		case clen == outLen:
+			copy(out, src[sp:sp+clen]) // sous-flux incompressible (brut)
+		case cname == "zstd":
+			err = zstdDecode(src[sp:sp+clen], out)
+		default:
+			err = lz4Decompress(src[sp:sp+clen], out)
+		}
+		if err != nil {
+			return fmt.Errorf("xarray: codec %q (sous-flux @%d): %w", cname, pos, err)
 		}
 		sp += clen
 	}

@@ -7,6 +7,20 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 67 — codec Blosc zstd)
+
+- **Codec Blosc `zstd`** pris en charge à la lecture, via
+  `github.com/klauspost/compress/zstd` (pur Go). Contrairement à LZ4/BLOSCLZ,
+  zstd ne découpe pas les blocs (un flux zstd par bloc). Première dépendance
+  externe du module (zstd est trop complexe pour un décodeur maison fiable).
+  Validé contre un store réel zarr-python. Test `TestZarrReadBloscZstd`.
+- **Reliquat bitshuffle non traité (assumé).** Le bitshuffle avec `nelem` non
+  multiple de 8 utilise un agencement spécifique (traitement par blocs + tail)
+  de la bibliothèque *bitshuffle* que l'on n'a pas pu reproduire de façon
+  certaine ; plutôt que de renvoyer des données fausses, ce cas échoue par une
+  **erreur explicite** (le cas `nelem` multiple de 8 reste géré). Test
+  `TestBitUnshuffleRemainder`.
+
 ### Corrigé/Ajouté (Sprint 66 — Blosc multi-blocs & bitshuffle)
 
 - **Correctif : décodage Blosc par bloc.** Le filtre (byte-shuffle) et le
