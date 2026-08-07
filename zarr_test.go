@@ -2,6 +2,7 @@ package xarray
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -122,6 +123,38 @@ func TestZarrWriteV3Roundtrip(t *testing.T) {
 	}
 	if !reflect.DeepEqual(v.Dims(), []string{"y", "x"}) {
 		t.Errorf("dims v3 = %v", v.Dims())
+	}
+}
+
+// TestZarrReadCFAttrs vérifie que les attributs CF (.zattrs) sont capturés dans
+// Variable.attrs à la lecture Zarr, ce qui permet à DecodeCF de dépacker un
+// produit satellite typique (int16 + scale_factor/add_offset).
+func TestZarrReadCFAttrs(t *testing.T) {
+	ds, err := ReadDatasetZarr("testdata/zarr_cf_packed")
+	if err != nil {
+		t.Fatalf("ReadDatasetZarr : %v", err)
+	}
+	v, err := ds.Get("B04")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Attributs présents.
+	at := v.Variable().Attrs()
+	if at["scale_factor"] != "0.0001" || at["units"] != "1" || at["long_name"] != "reflectance" {
+		t.Errorf("attrs CF non capturés : %v", at)
+	}
+	// Données brutes 0..11, puis dépacking : brut*0.0001 + 0.5.
+	if v.Data()[0] != 0 || v.Data()[11] != 11 {
+		t.Errorf("brut = %v", v.Data())
+	}
+	dec, err := DecodeCF(ds)
+	if err != nil {
+		t.Fatalf("DecodeCF : %v", err)
+	}
+	dv, _ := dec.Get("B04")
+	got := dv.Data()[11] // 11*0.0001 + 0.5
+	if math.Abs(got-(11*0.0001+0.5)) > 1e-9 {
+		t.Errorf("dépacking CF = %v, attendu %v", got, 11*0.0001+0.5)
 	}
 }
 

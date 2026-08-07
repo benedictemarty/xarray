@@ -137,6 +137,7 @@ func ReadDatasetZarr(dir string) (*Dataset[float64], error) {
 		shape []int
 		data  []float64
 		name  string
+		attrs map[string]string
 	}
 	arrays := map[string]arr{}
 	for _, e := range entries {
@@ -147,14 +148,14 @@ func ReadDatasetZarr(dir string) (*Dataset[float64], error) {
 		if _, statErr := os.Stat(filepath.Join(sub, ".zarray")); statErr != nil {
 			continue // pas un array Zarr
 		}
-		dims, shape, data, name, _, rerr := readZarrArrayInternal(sub)
+		dims, shape, data, name, _, attrs, rerr := readZarrArrayInternal(sub)
 		if rerr != nil {
 			return nil, fmt.Errorf("xarray: lecture de l'array %q : %w", e.Name(), rerr)
 		}
 		if name == "" {
 			name = e.Name()
 		}
-		arrays[e.Name()] = arr{dims: dims, shape: shape, data: data, name: name}
+		arrays[e.Name()] = arr{dims: dims, shape: shape, data: data, name: name, attrs: attrs}
 	}
 
 	// Coordonnées = arrays 1D dont le nom correspond à leur unique dimension.
@@ -179,6 +180,9 @@ func ReadDatasetZarr(dir string) (*Dataset[float64], error) {
 		da, derr := NewDataArray(a.dims, a.shape, a.data, coords, a.name)
 		if derr != nil {
 			return nil, fmt.Errorf("xarray: reconstruction de %q : %w", key, derr)
+		}
+		for k, v := range a.attrs {
+			da.variable.SetAttr(k, v)
 		}
 		vars[key] = da
 	}

@@ -58,6 +58,40 @@ type zarrayMeta struct {
 	Filters    interface{}         `json:"filters"`
 }
 
+// splitZAttrs sépare un objet d'attributs Zarr en clés structurelles
+// (_ARRAY_DIMENSIONS, name, coords — conventions de dimensions/coordonnées) et
+// attributs libres (units, scale_factor, add_offset, long_name…), ces derniers
+// convertis en chaînes pour alimenter Variable.attrs et permettre DecodeCF.
+func splitZAttrs(obj map[string]json.RawMessage) (dims []string, name string, coords map[string][]float64, attrs map[string]string) {
+	attrs = map[string]string{}
+	for k, raw := range obj {
+		switch k {
+		case "_ARRAY_DIMENSIONS":
+			_ = json.Unmarshal(raw, &dims)
+		case "name":
+			_ = json.Unmarshal(raw, &name)
+		case "coords":
+			_ = json.Unmarshal(raw, &coords)
+		default:
+			attrs[k] = jsonScalarToString(raw)
+		}
+	}
+	return dims, name, coords, attrs
+}
+
+// jsonScalarToString rend une valeur JSON sous forme de chaîne : les chaînes sont
+// déquotées, les autres scalaires (nombres, bool) gardent leur écriture JSON.
+func jsonScalarToString(raw json.RawMessage) string {
+	s := strings.TrimSpace(string(raw))
+	if len(s) >= 2 && s[0] == '"' {
+		var str string
+		if json.Unmarshal(raw, &str) == nil {
+			return str
+		}
+	}
+	return s
+}
+
 // parseZarrFill interprète un fill_value Zarr : nombre, null, ou les chaînes
 // spéciales "NaN"/"Infinity"/"-Infinity" (utilisées par zarr-python pour les
 // flottants). Renvoie la valeur de remplissage (0 si null/absent).
@@ -205,33 +239,40 @@ func ReadDataArrayZarr(dir string) (*DataArray[float64], error) {
 	if isZarrV3(dir) {
 		read = readZarrV3Array
 	}
-	dims, shape, data, name, coords, err := read(dir)
+	dims, shape, data, name, coords, attrs, err := read(dir)
 	if err != nil {
 		return nil, err
 	}
-	return NewDataArray(dims, shape, data, coords, name)
+	da, err := NewDataArray(dims, shape, data, coords, name)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range attrs {
+		da.variable.SetAttr(k, v)
+	}
+	return da, nil
 }
 
 // readZarrArrayInternal lit un array Zarr v2 et renvoie ses composants bruts
 // (dimensions, forme, données, nom, coordonnées éventuelles issues de `.zattrs`).
-func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float64, name string, coords map[string][]float64, err error) {
+func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float64, name string, coords map[string][]float64, attrs map[string]string, err error) {
 	var meta zarrayMeta
 	if err = readJSONFile(filepath.Join(dir, ".zarray"), &meta); err != nil {
-		return nil, nil, nil, "", nil, err
+		return nil, nil, nil, "", nil, nil, err
 	}
 	if meta.ZarrFormat != 2 {
-		return nil, nil, nil, "", nil, fmt.Errorf("xarray: seul Zarr v2 est pris en charge (format %d)", meta.ZarrFormat)
+		return nil, nil, nil, "", nil, nil, fmt.Errorf("xarray: seul Zarr v2 est pris en charge (format %d)", meta.ZarrFormat)
 	}
 	dt, err := parseZDtype(meta.Dtype)
 	if err != nil {
-		return nil, nil, nil, "", nil, err
+		return nil, nil, nil, "", nil, nil, err
 	}
 	if meta.Order != "" && meta.Order != "C" {
-		return nil, nil, nil, "", nil, fmt.Errorf("xarray: seul l'ordre C est pris en charge (%q)", meta.Order)
+		return nil, nil, nil, "", nil, nil, fmt.Errorf("xarray: seul l'ordre C est pris en charge (%q)", meta.Order)
 	}
 	dec, err := newDecompressor(meta.Compressor)
 	if err != nil {
-		return nil, nil, nil, "", nil, err
+		return nil, nil, nil, "", nil, nil, err
 	}
 
 	shape = meta.Shape
@@ -239,7 +280,7 @@ func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float
 	ndim := len(shape)
 	fill, err := parseZarrFill(meta.FillValue)
 	if err != nil {
-		return nil, nil, nil, "", nil, err
+		return nil, nil, nil, "", nil, nil, err
 	}
 
 	data = make([]float64, product(shape))
@@ -261,7 +302,7 @@ func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float
 	for done := false; !done; {
 		buf, ok, rerr := readChunk(dir, coord, chunkSize, dec, dt)
 		if rerr != nil {
-			return nil, nil, nil, "", nil, rerr
+			return nil, nil, nil, "", nil, nil, rerr
 		}
 		if ok {
 			local := make([]int, ndim)
@@ -293,11 +334,10 @@ func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float
 		}
 	}
 
-	var attrs zattrsMeta
-	if err = readJSONFile(filepath.Join(dir, ".zattrs"), &attrs); err != nil {
-		return nil, nil, nil, "", nil, err
-	}
-	dims = attrs.Dims
+	var rawAttrs map[string]json.RawMessage
+	_ = readJSONFile(filepath.Join(dir, ".zattrs"), &rawAttrs) // .zattrs optionnel
+	adims, name, coords, attrs := splitZAttrs(rawAttrs)
+	dims = adims
 	if len(dims) != ndim {
 		// Repli : dimensions anonymes si .zattrs incomplet.
 		dims = make([]string, ndim)
@@ -305,7 +345,7 @@ func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float
 			dims[i] = "dim_" + strconv.Itoa(i)
 		}
 	}
-	return dims, shape, data, attrs.Name, attrs.Coords, nil
+	return dims, shape, data, name, coords, attrs, nil
 }
 
 // --- Helpers ----------------------------------------------------------------

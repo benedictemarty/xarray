@@ -7,6 +7,20 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 71 — attributs CF à la lecture Zarr → dépacking satellite)
+
+- **Capture des attributs `.zattrs` (v2) et `attributes` (v3)** dans
+  `Variable.attrs` à la lecture Zarr : `units`, `long_name`, `scale_factor`,
+  `add_offset`, `_FillValue`… (les clés structurelles `_ARRAY_DIMENSIONS`/`name`/
+  `coords` restent traitées à part). Les valeurs numériques sont converties en
+  chaînes, comme côté netCDF.
+- Effet : **`DecodeCF` fonctionne désormais sur les données lues depuis Zarr** —
+  cas typique des produits satellite **int16 + `scale_factor`/`add_offset`**
+  (ex. réflectance MTG/Sentinel). Auparavant les attributs étaient ignorés et
+  `DecodeCF` était un no-op sur Zarr.
+- Validé : fixture `testdata/zarr_cf_packed` (int16, scale/offset) → lecture des
+  attributs + dépacking correct. Test `TestZarrReadCFAttrs`.
+
 ### Ajouté (Sprint 70 — découpage configurable à l'écriture Zarr)
 
 - **`WriteDatasetZarrChunked`** (v2) et **`WriteDatasetZarrV3Chunked`** (v3) :

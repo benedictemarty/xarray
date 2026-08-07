@@ -31,9 +31,10 @@ type zarrV3Array struct {
 			Separator string `json:"separator"`
 		} `json:"configuration"`
 	} `json:"chunk_key_encoding"`
-	FillValue      json.RawMessage `json:"fill_value"`
-	Codecs         []zarrV3Codec   `json:"codecs"`
-	DimensionNames []string        `json:"dimension_names"`
+	FillValue      json.RawMessage            `json:"fill_value"`
+	Codecs         []zarrV3Codec              `json:"codecs"`
+	DimensionNames []string                   `json:"dimension_names"`
+	Attributes     map[string]json.RawMessage `json:"attributes"`
 }
 
 type zarrV3Codec struct {
@@ -140,26 +141,26 @@ func v3ChunkKey(coord []int, name, sep string) string {
 }
 
 // readZarrV3Array lit un array Zarr v3 et renvoie ses composants bruts.
-func readZarrV3Array(dir string) (dims []string, shape []int, data []float64, name string, coords map[string][]float64, err error) {
+func readZarrV3Array(dir string) (dims []string, shape []int, data []float64, name string, coords map[string][]float64, attrs map[string]string, err error) {
 	var meta zarrV3Array
 	if err = readJSONFile(filepath.Join(dir, "zarr.json"), &meta); err != nil {
-		return nil, nil, nil, "", nil, err
+		return nil, nil, nil, "", nil, nil, err
 	}
 	if meta.ZarrFormat != 3 {
-		return nil, nil, nil, "", nil, fmt.Errorf("xarray: zarr_format %d inattendu (v3 attendu)", meta.ZarrFormat)
+		return nil, nil, nil, "", nil, nil, fmt.Errorf("xarray: zarr_format %d inattendu (v3 attendu)", meta.ZarrFormat)
 	}
 	dt, dec, perr := v3Pipeline(meta.DataType, meta.Codecs)
 	if perr != nil {
-		return nil, nil, nil, "", nil, perr
+		return nil, nil, nil, "", nil, nil, perr
 	}
 	shape = meta.Shape
 	chunks := meta.ChunkGrid.Configuration.ChunkShape
 	if len(chunks) != len(shape) {
-		return nil, nil, nil, "", nil, fmt.Errorf("xarray: chunk_shape incohérent avec shape")
+		return nil, nil, nil, "", nil, nil, fmt.Errorf("xarray: chunk_shape incohérent avec shape")
 	}
 	fill, ferr := parseZarrFill(meta.FillValue)
 	if ferr != nil {
-		return nil, nil, nil, "", nil, ferr
+		return nil, nil, nil, "", nil, nil, ferr
 	}
 	ndim := len(shape)
 	data = make([]float64, product(shape))
@@ -184,7 +185,7 @@ func readZarrV3Array(dir string) (dims []string, shape []int, data []float64, na
 	for done := false; !done; {
 		buf, ok, rerr := readChunkV3(dir, v3ChunkKey(coord, keyName, sep), chunkSize, dec, dt)
 		if rerr != nil {
-			return nil, nil, nil, "", nil, rerr
+			return nil, nil, nil, "", nil, nil, rerr
 		}
 		if ok {
 			local := make([]int, ndim)
@@ -223,7 +224,13 @@ func readZarrV3Array(dir string) (dims []string, shape []int, data []float64, na
 			dims[i] = "dim_" + strconv.Itoa(i)
 		}
 	}
-	return dims, shape, data, filepath.Base(dir), nil, nil
+	// Attributs libres v3 (units, scale_factor…) : le champ « attributes » ne
+	// contient pas de clés structurelles (dimension_names est au niveau racine).
+	attrs = map[string]string{}
+	for k, raw := range meta.Attributes {
+		attrs[k] = jsonScalarToString(raw)
+	}
+	return dims, shape, data, filepath.Base(dir), nil, attrs, nil
 }
 
 func readChunkV3(dir, key string, n int, dec decompressor, dt zdtype) ([]float64, bool, error) {
@@ -257,17 +264,18 @@ func readZarrV3Dataset(dir string) (*Dataset[float64], error) {
 		dims  []string
 		shape []int
 		data  []float64
+		attrs map[string]string
 	}
 	arrays := map[string]arr{}
 	for _, e := range entries {
 		if !e.IsDir() || !isZarrV3(filepath.Join(dir, e.Name())) {
 			continue
 		}
-		dims, shape, data, _, _, rerr := readZarrV3Array(filepath.Join(dir, e.Name()))
+		dims, shape, data, _, _, attrs, rerr := readZarrV3Array(filepath.Join(dir, e.Name()))
 		if rerr != nil {
 			return nil, fmt.Errorf("xarray: lecture de l'array %q : %w", e.Name(), rerr)
 		}
-		arrays[e.Name()] = arr{dims: dims, shape: shape, data: data}
+		arrays[e.Name()] = arr{dims: dims, shape: shape, data: data, attrs: attrs}
 	}
 	coordLabels := map[string][]float64{}
 	for key, a := range arrays {
@@ -289,6 +297,9 @@ func readZarrV3Dataset(dir string) (*Dataset[float64], error) {
 		da, derr := NewDataArray(a.dims, a.shape, a.data, coords, key)
 		if derr != nil {
 			return nil, derr
+		}
+		for k, v := range a.attrs {
+			da.variable.SetAttr(k, v)
 		}
 		vars[key] = da
 	}
