@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 29 — Rolling et Resample)
+
+- **`DataArray.Rolling(dim, window)`** : fenêtre glissante « trailing » le long
+  d'une dimension, agrégations `Mean`/`Sum`/`Min`/`Max` (résultat `float64`, même
+  forme, NaN aux bords incomplets — comme xarray).
+- **`DataArray.Resample(dim, freq)`** : rééchantillonnage par intervalles
+  réguliers d'une coordonnée numérique (binning `floor((l-origine)/freq)`),
+  agrégations `Sum`/`Mean`/`Min`/`Max` ; la dimension est réduite aux bins non
+  vides (coordonnée = borne gauche). Réutilise `groupReduceOn`.
+- Note : `Resample` opère sur une coordonnée numérique (pas encore de gestion du
+  temps/`datetime`).
+
 ## [0.7.0] — 2026-08-07
 
 Septième version : **backend GRIB via ecCodes** (cgo, opt-in) pour couvrir les
