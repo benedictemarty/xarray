@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 50 — Coarsen)
+
+- **`DataArray.Coarsen(dim, factor)`** et **`Dataset.Coarsen(dim, factor)`** :
+  agrégation par blocs **non chevauchants** (downsampling), boundary "trim".
+  Agrégations Sum/Mean/Min/Max. Utile pour réduire la résolution de grilles.
+
 ### Ajouté (Sprint 49 — Fonctions universelles)
 
 - **`Apply(fn)`** : fonction arbitraire élément par élément (dimensions et

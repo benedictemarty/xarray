@@ -78,6 +78,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-46 | En tant qu'utilisateur, je veux Resample/ResampleCalendar/GroupByTime au Dataset. | P1 | ✅ Fait (S47) |
 | US-47 | En tant qu'utilisateur, je veux squeeze/expand_dims/rename de dimensions. | P1 | ✅ Fait (S48) |
 | US-48 | En tant qu'utilisateur, je veux appliquer des fonctions (Apply, Abs, Sqrt, Clip...). | P1 | ✅ Fait (S49) |
+| US-49 | En tant qu'utilisateur, je veux coarsen (downsampling par blocs). | P2 | ✅ Fait (S50) |
 
 ## Dette / transverse
 
