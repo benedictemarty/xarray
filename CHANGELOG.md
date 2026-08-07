@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.9.0] — 2026-08-07
+
+Neuvième version : `where`/`interpolate_na`, et un ensemble complet de réductions
+statistiques et cumulatives (`var`/`std`/`median`/`quantile`,
+`argmin`/`argmax`/`idxmin`/`idxmax`, `cumsum`/`cumprod`/`diff`).
+
 ### Ajouté (Sprint 36 — IdxMin/IdxMax)
 
 - **`IdxMinAxis`/`IdxMaxAxis`** : étiquette de coordonnée à l'extremum le long
