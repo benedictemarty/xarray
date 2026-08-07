@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 74 — démo runnable NDVI + docs/SATELLITE.md)
+
+- **`cmd/ndvi`** : démonstration exécutable (`go run ./cmd/ndvi`) de la chaîne
+  raster complète : scène 2 bandes → **NDVI = (NIR−ROUGE)/(NIR+ROUGE)** (via
+  l'arithmétique DataArray) → **géoréférencement** (affine + CRS) → **carte
+  ASCII** + stats → **découpe par emprise** (coords monde) → **export Zarr**
+  (groupe, zstd). L'export est relu **exactement par zarr-python** (aller-retour
+  validé).
+- **`docs/SATELLITE.md`** : documentation de bout en bout du pipeline imagerie
+  satellite (lire → DecodeCF → géoréférencer → découper → exporter), matrice de
+  capacités validées, limites assumées, note d'accès MTG/EUMETSAT.
+
 ### Ajouté (Sprint 73 — géoréférencement automatique depuis les métadonnées CF)
 
 - **`ParseGDALGeoTransform`** : lit une chaîne GeoTransform GDAL
