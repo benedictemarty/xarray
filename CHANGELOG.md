@@ -7,6 +7,13 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 34 — Réductions statistiques et cumulatives)
+
+- **Statistiques** : `Var`/`Std`/`Median` (globales) et `VarAxis`/`StdAxis`/
+  `MedianAxis` (par axe, `float64`). Variance de population (ddof=0), comme xarray.
+- **Cumulatives** : `Cumsum(dim)` (somme cumulée, même forme) et `Diff(dim)`
+  (différences successives, dimension réduite de 1, coordonnée = positions 1..n-1).
+
 ### Ajouté (Sprint 33 — Where et InterpolateNA)
 
 - **`WhereFunc(keep, other)`** : masquage conditionnel élément par élément.
