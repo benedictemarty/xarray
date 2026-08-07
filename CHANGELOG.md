@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 33 — Where et InterpolateNA)
+
+- **`WhereFunc(keep, other)`** : masquage conditionnel élément par élément.
+- **`Where(mask, other)`** : masquage par un DataArray de même forme (non-zéro =
+  conserver, sinon `other`).
+- **`InterpolateNA(dim)`** : interpolation linéaire des NaN le long de dim, selon
+  la coordonnée si présente (sinon la position) ; NaN de bord conservés.
+
 ## [0.8.0] — 2026-08-07
 
 Huitième version : **étage analyse** — `rolling`/`resample`, coordonnées
