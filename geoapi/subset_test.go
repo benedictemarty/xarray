@@ -40,6 +40,35 @@ func TestSubsetBBox(t *testing.T) {
 	}
 }
 
+// TestSubsetBBoxGeoref verrouille la chaîne complète : un raster géoréférencé via
+// une affine (axe y décroissant, comme les rasters réels) est découpé par une
+// emprise exprimée en coordonnées monde.
+func TestSubsetBBoxGeoref(t *testing.T) {
+	// Raster 3×4 sans coords ; affine : origine (-10, 50), pixel 0.25, y décroissant.
+	data := make([]float64, 12)
+	for i := range data {
+		data[i] = float64(i)
+	}
+	da, _ := xarray.NewDataArray([]string{"y", "x"}, []int{3, 4}, data, nil, "B04")
+	gr := xarray.GeoRef{Transform: xarray.Affine{A: 0.25, B: 0, C: -10, D: 0, E: -0.25, F: 50}}
+	g, err := da.Georeference(gr, "x", "y")
+	if err != nil {
+		t.Fatalf("Georeference : %v", err)
+	}
+	// Centres : x=[-9.875,-9.625,-9.375,-9.125], y=[49.875,49.625,49.375].
+	// bbox monde x∈[-9.8,-9.3], y∈[49.4,49.7] -> colonnes 1,2 ; ligne 1 -> [5 6].
+	sub, err := SubsetBBox(g, "x", "y", BBox{MinX: -9.8, MinY: 49.4, MaxX: -9.3, MaxY: 49.7})
+	if err != nil {
+		t.Fatalf("SubsetBBox : %v", err)
+	}
+	if !reflect.DeepEqual(sub.Shape(), []int{1, 2}) {
+		t.Errorf("Shape = %v, attendu [1 2]", sub.Shape())
+	}
+	if !reflect.DeepEqual(sub.Data(), []float64{5, 6}) {
+		t.Errorf("Data = %v, attendu [5 6]", sub.Data())
+	}
+}
+
 func TestPosition(t *testing.T) {
 	da := grilleGeo(t)
 	// point (lon=0.9, lat=44.1) -> plus proche lon 1 (idx1), lat 44 (idx1)
