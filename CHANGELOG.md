@@ -7,6 +7,37 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.13.0] — 2026-08-07
+
+Treizième version : coordonnées textuelles (stations/catégories), `groupby_bins`
+(intervalles arbitraires), `Dot` (contraction tensorielle nommée) et fonctions
+universelles supplémentaires (round/sign/trigonométrie, maximum/minimum).
+
+### Ajouté (Sprint 54 — ufuncs supplémentaires et binaires)
+
+- **Arrondis / signe / trigonométrie** : `Round`, `Floor`, `Ceil`, `Sign`, `Sin`,
+  `Cos`, `Tanh`.
+- **Binaires élément par élément** : `Maximum(other)`, `Minimum(other)` (avec
+  alignement et broadcasting).
+
+### Ajouté (Sprint 53 — Dot / contraction tensorielle)
+
+- **`Dot(a, b, dim)`** : contraction de deux DataArrays sur une dimension commune
+  nommée (`xr.dot`), dimensions restantes et coordonnées conservées. Couvre
+  produit matriciel, matrice-vecteur et produit scalaire.
+
+### Ajouté (Sprint 52 — GroupByBins)
+
+- **`DataArray.GroupByBins(dim, edges)`** et **`Dataset.GroupByBins`** :
+  regroupement par intervalles arbitraires (`groupby_bins`) ; intervalles
+  `[edges[k], edges[k+1])`, dernier fermé à droite, valeurs hors bornes ignorées.
+
+### Ajouté (Sprint 51 — Coordonnées textuelles)
+
+- **Coordonnées non numériques (string)** sur les dimensions : `WithStrCoord`,
+  `StrCoord`, `SelStr`, `SelStrMany`. Données numériques (T), étiquettes texte
+  (stations, catégories) ; préservées par l'indexation.
+
 ## [0.12.0] — 2026-08-07
 
 Douzième version : propagation d'opérations au Dataset (Rolling, resample/temporel),
