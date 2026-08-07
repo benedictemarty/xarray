@@ -14,6 +14,7 @@ type zarrRowSource struct {
 	shape     []int
 	chunks    []int
 	dec       decompressor
+	dt        zdtype
 	dims      []string
 	coords    map[string][]float64
 	chunkSize int // lignes par chunk lazy (axe 0)
@@ -51,7 +52,7 @@ func (z *zarrRowSource) readBlock(rowStart, rowEnd int) ([]float64, error) {
 
 	if len(z.shape) == 1 {
 		for rc := rcStart; rc <= rcEnd; rc++ {
-			cd, ok, err := readChunk(z.dir, []int{rc}, cr, z.dec)
+			cd, ok, err := readChunk(z.dir, []int{rc}, cr, z.dec, z.dt)
 			if err != nil {
 				return nil, err
 			}
@@ -76,7 +77,7 @@ func (z *zarrRowSource) readBlock(rowStart, rowEnd int) ([]float64, error) {
 	ncCol := (C + cc - 1) / cc
 	for rc := rcStart; rc <= rcEnd; rc++ {
 		for cci := 0; cci < ncCol; cci++ {
-			cd, ok, err := readChunk(z.dir, []int{rc, cci}, nChunkSize, z.dec)
+			cd, ok, err := readChunk(z.dir, []int{rc, cci}, nChunkSize, z.dec, z.dt)
 			if err != nil {
 				return nil, err
 			}
@@ -115,8 +116,9 @@ func ChunkZarr(dir string, chunkSize int) (*LazyArray, error) {
 	if meta.ZarrFormat != 2 {
 		return nil, fmt.Errorf("xarray: seul Zarr v2 est pris en charge")
 	}
-	if meta.Dtype != "<f8" {
-		return nil, fmt.Errorf("xarray: seul le dtype \"<f8\" est pris en charge (%q)", meta.Dtype)
+	dt, err := parseZDtype(meta.Dtype)
+	if err != nil {
+		return nil, err
 	}
 	if len(meta.Shape) < 1 || len(meta.Shape) > 2 {
 		return nil, fmt.Errorf("xarray: ChunkZarr gère les tableaux 1D/2D (%dD)", len(meta.Shape))
@@ -137,7 +139,7 @@ func ChunkZarr(dir string, chunkSize int) (*LazyArray, error) {
 	}
 
 	src := &zarrRowSource{
-		dir: dir, shape: meta.Shape, chunks: meta.Chunks, dec: dec,
+		dir: dir, shape: meta.Shape, chunks: meta.Chunks, dec: dec, dt: dt,
 		dims: dims, coords: attrs.Coords, chunkSize: chunkSize,
 	}
 	return &LazyArray{src: src, name: attrs.Name}, nil

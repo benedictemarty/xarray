@@ -7,6 +7,23 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 65 — lecture de Zarr réels : Blosc/LZ4 + dtypes)
+
+- **Décodeur Blosc/LZ4 pur Go** (`zarr_blosc.go`) : xarray-go lit désormais les
+  stores Zarr produits par **zarr-python avec le compresseur par défaut**
+  (Blosc, codec LZ4, byte-shuffle) — auparavant seuls `none`/`zlib` étaient gérés.
+  Gère le conteneur Blosc v1 (memcpy + blocs), le découpage en `typesize`
+  sous-flux (règle `BLOSC_MIN_BUFFERSIZE=128`), les sous-flux non compressés
+  (`clen==neblock`), le décodage LZ4 *block* et le byte-unshuffle. Bitshuffle et
+  autres codecs (zstd) non gérés (erreur explicite).
+- **Dtypes numériques** : lecture de `<f8/<f4`, `<i8/<i4/<i2/<i1`, `<u*` (et
+  boutisme `>`), tous convertis en float64. Les **coordonnées int64** (`<i8`,
+  courantes chez zarr-python) et variables entières se lisent enfin.
+- **`fill_value` non numérique** : `"NaN"`/`"Infinity"`/`"-Infinity"` gérés.
+- Validé contre des stores réels **zarr-python 3.3.0** (memcpy, LZ4 découpé,
+  sous-flux brut, coords int64). Tests hermétiques `TestZarrReadBloscLZ4` et
+  `TestZarrReadIntDtypes` (+ fixtures `testdata/`).
+
 ### Ajouté (Sprint 64 — geoapi : domaine PointSeries)
 
 - **`geoapi.ToCoverageJSON` émet `domainType: "PointSeries"`** lorsque la grille

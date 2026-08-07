@@ -214,8 +214,9 @@ func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float
 	if meta.ZarrFormat != 2 {
 		return nil, nil, nil, "", nil, fmt.Errorf("xarray: seul Zarr v2 est pris en charge (format %d)", meta.ZarrFormat)
 	}
-	if meta.Dtype != "<f8" {
-		return nil, nil, nil, "", nil, fmt.Errorf("xarray: seul le dtype \"<f8\" (float64) est pris en charge (%q)", meta.Dtype)
+	dt, err := parseZDtype(meta.Dtype)
+	if err != nil {
+		return nil, nil, nil, "", nil, err
 	}
 	if meta.Order != "" && meta.Order != "C" {
 		return nil, nil, nil, "", nil, fmt.Errorf("xarray: seul l'ordre C est pris en charge (%q)", meta.Order)
@@ -250,7 +251,7 @@ func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float
 
 	coord := make([]int, ndim)
 	for done := false; !done; {
-		buf, ok, rerr := readChunk(dir, coord, chunkSize, dec)
+		buf, ok, rerr := readChunk(dir, coord, chunkSize, dec, dt)
 		if rerr != nil {
 			return nil, nil, nil, "", nil, rerr
 		}
@@ -365,6 +366,93 @@ func decodeF64LE(buf []byte, n int) ([]float64, error) {
 	return out, nil
 }
 
+// zdtype décrit un dtype numpy Zarr (ex. "<f8", "<i8", ">f4") : type (f/i/u),
+// taille en octets, boutisme. Tous convertis en float64 à la lecture.
+type zdtype struct {
+	kind byte // 'f', 'i', 'u'
+	size int
+	be   bool
+}
+
+func parseZDtype(s string) (zdtype, error) {
+	if len(s) < 3 {
+		return zdtype{}, fmt.Errorf("xarray: dtype Zarr invalide %q", s)
+	}
+	var be bool
+	switch s[0] {
+	case '<', '|':
+		be = false
+	case '>':
+		be = true
+	default:
+		return zdtype{}, fmt.Errorf("xarray: boutisme dtype %q non géré", s)
+	}
+	kind := s[1]
+	size, err := strconv.Atoi(s[2:])
+	if err != nil || size <= 0 {
+		return zdtype{}, fmt.Errorf("xarray: taille dtype %q invalide", s)
+	}
+	switch kind {
+	case 'f':
+		if size != 4 && size != 8 {
+			return zdtype{}, fmt.Errorf("xarray: flottant %q non géré (f4/f8)", s)
+		}
+	case 'i', 'u':
+		if size != 1 && size != 2 && size != 4 && size != 8 {
+			return zdtype{}, fmt.Errorf("xarray: entier %q non géré (1/2/4/8 octets)", s)
+		}
+	default:
+		return zdtype{}, fmt.Errorf("xarray: dtype %q non géré (f/i/u)", s)
+	}
+	return zdtype{kind, size, be}, nil
+}
+
+// decode convertit n éléments du buffer brut en float64 selon le dtype.
+func (dt zdtype) decode(buf []byte, n int) ([]float64, error) {
+	if len(buf) < n*dt.size {
+		return nil, fmt.Errorf("xarray: chunk trop court (%d octets pour %d valeurs de %d)", len(buf), n, dt.size)
+	}
+	var ord binary.ByteOrder = binary.LittleEndian
+	if dt.be {
+		ord = binary.BigEndian
+	}
+	out := make([]float64, n)
+	for i := 0; i < n; i++ {
+		b := buf[i*dt.size:]
+		switch {
+		case dt.kind == 'f' && dt.size == 8:
+			out[i] = math.Float64frombits(ord.Uint64(b))
+		case dt.kind == 'f' && dt.size == 4:
+			out[i] = float64(math.Float32frombits(ord.Uint32(b)))
+		default: // entiers signés / non signés
+			out[i] = decodeInt(b, dt.size, ord, dt.kind == 'i')
+		}
+	}
+	return out, nil
+}
+
+func decodeInt(b []byte, size int, ord binary.ByteOrder, signed bool) float64 {
+	var u uint64
+	switch size {
+	case 1:
+		u = uint64(b[0])
+	case 2:
+		u = uint64(ord.Uint16(b))
+	case 4:
+		u = uint64(ord.Uint32(b))
+	case 8:
+		u = ord.Uint64(b)
+	}
+	if signed {
+		bits := uint(size * 8)
+		if bits < 64 && u&(1<<(bits-1)) != 0 {
+			u |= ^uint64(0) << bits // extension de signe
+		}
+		return float64(int64(u))
+	}
+	return float64(u)
+}
+
 func writeChunk(dir string, coord []int, data []float64, comp ZarrComp) error {
 	raw := encodeF64LE(data)
 	if comp == ZarrZlib {
@@ -381,7 +469,7 @@ func writeChunk(dir string, coord []int, data []float64, comp ZarrComp) error {
 	return os.WriteFile(filepath.Join(dir, chunkKey(coord)), raw, 0o644)
 }
 
-func readChunk(dir string, coord []int, n int, dec decompressor) ([]float64, bool, error) {
+func readChunk(dir string, coord []int, n int, dec decompressor, dt zdtype) ([]float64, bool, error) {
 	raw, err := os.ReadFile(filepath.Join(dir, chunkKey(coord)))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -394,7 +482,7 @@ func readChunk(dir string, coord []int, n int, dec decompressor) ([]float64, boo
 			return nil, false, err
 		}
 	}
-	buf, err := decodeF64LE(raw, n)
+	buf, err := dt.decode(raw, n)
 	if err != nil {
 		return nil, false, err
 	}

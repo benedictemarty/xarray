@@ -8,6 +8,29 @@ import (
 	"testing"
 )
 
+// TestZarrReadIntDtypes lit un store Zarr réel (fixture testdata/) dont les
+// coordonnées sont en int64 (`<i8`) et une variable en int32 (`<i4`) — cas
+// courant de zarr-python. Ils doivent être convertis en float64.
+func TestZarrReadIntDtypes(t *testing.T) {
+	ds, err := ReadDatasetZarr("testdata/zarr_int_dtypes")
+	if err != nil {
+		t.Fatalf("ReadDatasetZarr (dtypes entiers) : %v", err)
+	}
+	if yv, _ := ds.Coord("y"); !reflect.DeepEqual(yv, []float64{45, 44, 43}) {
+		t.Errorf("coord y (i8) = %v, attendu [45 44 43]", yv)
+	}
+	if xv, _ := ds.Coord("x"); !reflect.DeepEqual(xv, []float64{0, 1, 2, 3}) {
+		t.Errorf("coord x (i8) = %v, attendu [0 1 2 3]", xv)
+	}
+	cnt, err := ds.Get("count")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(cnt.Data(), []float64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}) {
+		t.Errorf("count (i4) = %v", cnt.Data())
+	}
+}
+
 // TestZarrReadBloscLZ4 lit un store Zarr réel produit par zarr-python avec le
 // compresseur par défaut (Blosc/LZ4 + byte-shuffle). Fixture dans testdata/ :
 // v[i] = i % 16 sur une grille 16×16. Valide le décodeur Blosc pur Go
@@ -155,10 +178,10 @@ func TestZarrChunksInvalides(t *testing.T) {
 func TestZarrDtypeNonSupporte(t *testing.T) {
 	dir := t.TempDir()
 	writeJSONFile(filepath.Join(dir, ".zarray"), zarrayMeta{
-		ZarrFormat: 2, Shape: []int{2}, Chunks: []int{2}, Dtype: "<i4", Order: "C",
+		ZarrFormat: 2, Shape: []int{2}, Chunks: []int{2}, Dtype: "<c16", Order: "C",
 	})
 	writeJSONFile(filepath.Join(dir, ".zattrs"), zattrsMeta{Dims: []string{"x"}})
 	if _, err := ReadDataArrayZarr(dir); err == nil {
-		t.Error("erreur attendue : dtype non supporté")
+		t.Error("erreur attendue : dtype non supporté (complexe)")
 	}
 }
