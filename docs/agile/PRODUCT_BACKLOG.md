@@ -57,6 +57,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-25 | En tant qu'utilisateur, je veux lire/écrire du Zarr (v2). | P1 | ✅ Fait (S24) |
 | US-26 | En tant qu'utilisateur, je veux de l'algèbre linéaire et du ML classique. | P2 | ✅ Fait (S22-23) |
 | US-27 | En tant qu'utilisateur, je veux lire du GRIB2 (grille lat/lon, simple packing). | P2 | ✅ Fait (S26, sous-ensemble) |
+| US-28 | En tant qu'utilisateur, je veux lire le GRIB2 complex packing (templates 5.2/5.3). | P2 | ✅ Fait (S27, validé ecCodes) |
 
 ## Dette / transverse
 

@@ -88,6 +88,8 @@ func decodeGrib2Message(msg []byte) (*GribMessage, error) {
 		binaryScale  int
 		decimalScale int
 		bitsPerValue int
+		drt          int
+		sec5         []byte
 		dataBytes    []byte
 		haveGrid     bool
 		haveDRS      bool
@@ -125,10 +127,11 @@ func decodeGrib2Message(msg []byte) (*GribMessage, error) {
 			haveGrid = true
 
 		case 5: // Data Representation Section
-			tmpl := binary.BigEndian.Uint16(sec[9:11])
-			if tmpl != 0 {
-				return nil, fmt.Errorf("xarray: packing GRIB template %d non géré (seul simple packing=0 ; complex/second-order requiert ecCodes)", tmpl)
+			drt = int(binary.BigEndian.Uint16(sec[9:11]))
+			if drt != 0 && drt != 2 && drt != 3 {
+				return nil, fmt.Errorf("xarray: packing GRIB template %d non géré (0=simple, 2/3=complex ; les templates locaux comme 50002 requièrent ecCodes)", drt)
 			}
+			sec5 = append([]byte(nil), sec...)
 			refValue = math.Float32frombits(binary.BigEndian.Uint32(sec[11:15]))
 			binaryScale = signMag16(binary.BigEndian.Uint16(sec[15:17]))
 			decimalScale = signMag16(binary.BigEndian.Uint16(sec[17:19]))
@@ -154,18 +157,179 @@ func decodeGrib2Message(msg []byte) (*GribMessage, error) {
 	n := out.Ni * out.Nj
 	pow2 := math.Pow(2, float64(binaryScale))
 	pow10 := math.Pow(10, float64(decimalScale))
-	values := make([]float64, n)
-	br := &bitReader{data: dataBytes}
-	for i := 0; i < n; i++ {
-		x, err := br.read(bitsPerValue)
+
+	var scaled []int64
+	if drt == 0 {
+		scaled = make([]int64, n)
+		br := &bitReader{data: dataBytes}
+		for i := 0; i < n; i++ {
+			x, err := br.read(bitsPerValue)
+			if err != nil {
+				return nil, err
+			}
+			scaled[i] = int64(x)
+		}
+	} else {
+		var err error
+		scaled, err = unpackComplex(sec5, dataBytes, n, bitsPerValue, drt)
 		if err != nil {
 			return nil, err
 		}
-		// Simple packing : Y = (R + X·2^E) / 10^D.
-		values[i] = (float64(refValue) + float64(x)*pow2) / pow10
+	}
+
+	values := make([]float64, n)
+	for i := 0; i < n; i++ {
+		// Y = (R + X·2^E) / 10^D.
+		values[i] = (float64(refValue) + float64(scaled[i])*pow2) / pow10
 	}
 	out.Values = values
 	return out, nil
+}
+
+// unpackComplex décode la section 7 en complex packing (templates WMO 5.2 et
+// 5.3). Algorithme conforme à g2clib (comunpack) : alignement à l'octet après
+// chaque bloc (références, largeurs, longueurs de groupe).
+func unpackComplex(sec5, data []byte, n, bitsPerValue, drt int) ([]int64, error) {
+	if sec5[22] != 0 {
+		return nil, fmt.Errorf("xarray: gestion des valeurs manquantes GRIB non gérée (%d)", sec5[22])
+	}
+	ng := int(binary.BigEndian.Uint32(sec5[31:35]))
+	refGroupWidths := int(sec5[35])
+	nbitsGroupWidths := int(sec5[36])
+	refGroupLengths := int(binary.BigEndian.Uint32(sec5[37:41]))
+	lengthIncrement := int(sec5[41])
+	trueLengthLastGroup := int(binary.BigEndian.Uint32(sec5[42:46]))
+	nbitsGroupLengths := int(sec5[46])
+
+	order, nds := 0, 0
+	if drt == 3 {
+		order = int(sec5[47])
+		nds = int(sec5[48])
+	}
+
+	br := &bitReader{data: data}
+
+	// Différenciation spatiale : valeurs initiales + minimum global (signé).
+	initials := make([]int64, order)
+	var omin int64
+	if order > 0 {
+		nbitsd := nds * 8
+		for g := 0; g < order; g++ {
+			v, err := br.read(nbitsd)
+			if err != nil {
+				return nil, err
+			}
+			initials[g] = int64(v)
+		}
+		sign, err := br.read(1)
+		if err != nil {
+			return nil, err
+		}
+		mag, err := br.read(nbitsd - 1)
+		if err != nil {
+			return nil, err
+		}
+		omin = int64(mag)
+		if sign == 1 {
+			omin = -omin
+		}
+	}
+
+	// Références de groupe (bitsPerValue bits) + alignement octet.
+	refs := make([]int64, ng)
+	if bitsPerValue != 0 {
+		for k := 0; k < ng; k++ {
+			v, err := br.read(bitsPerValue)
+			if err != nil {
+				return nil, err
+			}
+			refs[k] = int64(v)
+		}
+		br.align()
+	}
+
+	// Largeurs de groupe (+ référence) + alignement octet.
+	widths := make([]int, ng)
+	if nbitsGroupWidths != 0 {
+		for k := 0; k < ng; k++ {
+			v, err := br.read(nbitsGroupWidths)
+			if err != nil {
+				return nil, err
+			}
+			widths[k] = int(v)
+		}
+		br.align()
+	}
+	for k := 0; k < ng; k++ {
+		widths[k] += refGroupWidths
+	}
+
+	// Longueurs de groupe (échelle + référence, dernier = trueLength) + alignement.
+	lengths := make([]int, ng)
+	if nbitsGroupLengths != 0 {
+		for k := 0; k < ng; k++ {
+			v, err := br.read(nbitsGroupLengths)
+			if err != nil {
+				return nil, err
+			}
+			lengths[k] = int(v)
+		}
+		br.align()
+	}
+	total := 0
+	for k := 0; k < ng; k++ {
+		lengths[k] = lengths[k]*lengthIncrement + refGroupLengths
+	}
+	lengths[ng-1] = trueLengthLastGroup
+	for k := 0; k < ng; k++ {
+		total += lengths[k]
+	}
+	if total != n {
+		return nil, fmt.Errorf("xarray: somme des longueurs de groupe (%d) != nombre de points (%d)", total, n)
+	}
+
+	// Valeurs : pour chaque groupe, length valeurs de width bits + réf du groupe.
+	vals := make([]int64, n)
+	idx := 0
+	for k := 0; k < ng; k++ {
+		w := widths[k]
+		if w == 0 {
+			for j := 0; j < lengths[k]; j++ {
+				vals[idx] = refs[k]
+				idx++
+			}
+			continue
+		}
+		for j := 0; j < lengths[k]; j++ {
+			v, err := br.read(w)
+			if err != nil {
+				return nil, err
+			}
+			vals[idx] = refs[k] + int64(v)
+			idx++
+		}
+	}
+
+	// Réversion de la différenciation spatiale.
+	switch order {
+	case 0:
+	case 1:
+		vals[0] = initials[0]
+		for i := 1; i < n; i++ {
+			vals[i] += omin
+			vals[i] += vals[i-1]
+		}
+	case 2:
+		vals[0] = initials[0]
+		vals[1] = initials[1]
+		for i := 2; i < n; i++ {
+			vals[i] += omin
+			vals[i] += 2*vals[i-1] - vals[i-2]
+		}
+	default:
+		return nil, fmt.Errorf("xarray: ordre de différenciation spatiale %d non géré", order)
+	}
+	return vals, nil
 }
 
 // signMag16 décode un entier 16 bits en représentation signe-magnitude (GRIB).
@@ -180,6 +344,13 @@ func signMag16(u uint16) int {
 type bitReader struct {
 	data   []byte
 	bitpos int
+}
+
+// align avance jusqu'à la prochaine frontière d'octet.
+func (b *bitReader) align() {
+	if b.bitpos%8 != 0 {
+		b.bitpos += 8 - (b.bitpos % 8)
+	}
 }
 
 func (b *bitReader) read(nbits int) (uint64, error) {

@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 27 — GRIB2 complex packing + différenciation spatiale)
+
+- **`ReadGrib` gère désormais le complex packing** (templates 5.2 et 5.3) en plus
+  du simple packing : références/largeurs/longueurs de groupe avec **alignement à
+  l'octet** entre blocs (conforme à g2clib `comunpack`), et **différenciation
+  spatiale** d'ordre 1 et 2 (ajout du minimum global + sommation récursive).
+- **Validé contre ecCodes** : un vrai champ 201×131 réencodé en
+  `grid_complex_spatial_differencing` → **26 331 valeurs identiques** (diff max
+  = 0,0). Test unitaire versionné (`testdata/complex_synth.grib2`, données
+  synthétiques).
+- Les templates de packing **locaux** (ex. 50002 Météo-France) restent non gérés
+  (erreur explicite → ecCodes requis).
+
 ### Ajouté (Sprint 26 — Lecture GRIB2, sous-ensemble)
 
 - **`ReadGrib`** : lecture GRIB2 pour grille **régulière lat/lon** (`regular_ll`)
