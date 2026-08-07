@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.6.0] — 2026-08-07
+
+Sixième version : **lecture GRIB2** (grille lat/lon), en simple packing **et**
+complex packing / différenciation spatiale (templates 5.0/5.2/5.3), validée au
+bit près contre ecCodes.
+
 ### Ajouté (Sprint 27 — GRIB2 complex packing + différenciation spatiale)
 
 - **`ReadGrib` gère désormais le complex packing** (templates 5.2 et 5.3) en plus
