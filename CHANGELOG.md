@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 64 — geoapi : domaine PointSeries)
+
+- **`geoapi.ToCoverageJSON` émet `domainType: "PointSeries"`** lorsque la grille
+  est réduite à un point (1×1), au lieu de « Grid » figé — conforme à la
+  spécification CoverageJSON. Aligne l'encodeur mono-`DataArray` de `geoapi` sur
+  le comportement multi-paramètres de gocoverage. Test `TestToCoverageJSONPointSeries`.
+
+### Corrigé (Sprint 62 bis — lecture des `fill_value` non numériques)
+
+- **`readZarrArrayInternal` décode le `fill_value` via `parseZarrFill`**, gérant
+  les jetons JSON `"NaN"`/`"Infinity"`/`"-Infinity"` (le champ `fill_value` du
+  `.zarray` est un `json.RawMessage`). Complète le câblage du consommateur.
+
 ### Ajouté (Sprint 63 — métadonnées Zarr consolidées)
 
 - **`WriteDatasetZarr` écrit désormais un `.zmetadata` consolidé** (Zarr v2,

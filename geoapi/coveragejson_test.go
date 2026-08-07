@@ -65,3 +65,25 @@ func TestToCoverageJSONErreurs(t *testing.T) {
 		t.Error("erreur attendue : dimensions dans le mauvais ordre")
 	}
 }
+
+func TestToCoverageJSONPointSeries(t *testing.T) {
+	// Grille 1×1 → domaine PointSeries.
+	da, _ := xarray.NewDataArray(
+		[]string{"latitude", "longitude"}, []int{1, 1},
+		[]float64{42},
+		map[string][]float64{"latitude": {44}, "longitude": {2}},
+		"temperature",
+	)
+	b, err := ToCoverageJSON(da, "temperature", "longitude", "latitude")
+	if err != nil {
+		t.Fatalf("ToCoverageJSON : %v", err)
+	}
+	var doc map[string]interface{}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		t.Fatal(err)
+	}
+	dt := doc["domain"].(map[string]interface{})["domainType"]
+	if dt != "PointSeries" {
+		t.Errorf("domainType = %v, attendu PointSeries", dt)
+	}
+}

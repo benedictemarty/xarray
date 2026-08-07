@@ -40,7 +40,11 @@ const (
 
 type zarrCompressorMeta struct {
 	ID    string `json:"id"`
-	Level int    `json:"level"`
+	Level int    `json:"level,omitempty"`
+	// Champs Blosc (présents à la lecture d'un store zarr-python typique).
+	Cname     string `json:"cname,omitempty"`
+	Shuffle   int    `json:"shuffle,omitempty"`
+	Blocksize int    `json:"blocksize,omitempty"`
 }
 
 type zarrayMeta struct {
@@ -49,9 +53,40 @@ type zarrayMeta struct {
 	Chunks     []int               `json:"chunks"`
 	Dtype      string              `json:"dtype"`
 	Compressor *zarrCompressorMeta `json:"compressor"`
-	FillValue  *float64            `json:"fill_value"`
+	FillValue  json.RawMessage     `json:"fill_value"`
 	Order      string              `json:"order"`
 	Filters    interface{}         `json:"filters"`
+}
+
+// parseZarrFill interprète un fill_value Zarr : nombre, null, ou les chaînes
+// spéciales "NaN"/"Infinity"/"-Infinity" (utilisées par zarr-python pour les
+// flottants). Renvoie la valeur de remplissage (0 si null/absent).
+func parseZarrFill(raw json.RawMessage) (float64, error) {
+	s := strings.TrimSpace(string(raw))
+	if s == "" || s == "null" {
+		return 0, nil
+	}
+	if s[0] == '"' {
+		var str string
+		if err := json.Unmarshal(raw, &str); err != nil {
+			return 0, err
+		}
+		switch str {
+		case "NaN":
+			return math.NaN(), nil
+		case "Infinity":
+			return math.Inf(1), nil
+		case "-Infinity":
+			return math.Inf(-1), nil
+		default:
+			return 0, fmt.Errorf("xarray: fill_value %q non reconnu", str)
+		}
+	}
+	var f float64
+	if err := json.Unmarshal(raw, &f); err != nil {
+		return 0, err
+	}
+	return f, nil
 }
 
 type zattrsMeta struct {
@@ -197,9 +232,9 @@ func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float
 	shape = meta.Shape
 	chunks := meta.Chunks
 	ndim := len(shape)
-	fill := 0.0
-	if meta.FillValue != nil {
-		fill = *meta.FillValue
+	fill, err := parseZarrFill(meta.FillValue)
+	if err != nil {
+		return nil, nil, nil, "", nil, err
 	}
 
 	data = make([]float64, product(shape))

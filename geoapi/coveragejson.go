@@ -61,9 +61,11 @@ type ndArray struct {
 
 const crs84 = "http://www.opengis.net/def/crs/OGC/1.3/CRS84"
 
-// ToCoverageJSON produit un document CoverageJSON (domaine Grid, CRS84) à partir
-// d'un DataArray[float64] 2D dont les dimensions sont (yDim, xDim) — typiquement
-// (latitude, longitude). param est le nom du paramètre exposé.
+// ToCoverageJSON produit un document CoverageJSON (CRS84) à partir d'un
+// DataArray[float64] 2D dont les dimensions sont (yDim, xDim) — typiquement
+// (latitude, longitude). param est le nom du paramètre exposé. Le domaine est
+// « Grid », ou « PointSeries » lorsque la grille est réduite à un point (1×1),
+// conformément à la spécification CoverageJSON.
 func ToCoverageJSON(da *xarray.DataArray[float64], param, xDim, yDim string) ([]byte, error) {
 	dims := da.Dims()
 	if len(dims) != 2 {
@@ -82,11 +84,17 @@ func ToCoverageJSON(da *xarray.DataArray[float64], param, xDim, yDim string) ([]
 	}
 	shape := da.Shape() // [Ny, Nx]
 
+	// Grille réduite à un point → domaine PointSeries (spec CoverageJSON).
+	domainType := "Grid"
+	if shape[0] == 1 && shape[1] == 1 {
+		domainType = "PointSeries"
+	}
+
 	doc := covJSON{
 		Type: "Coverage",
 		Domain: domain{
 			Type:       "Domain",
-			DomainType: "Grid",
+			DomainType: domainType,
 			Axes: map[string]axis{
 				"x": {Values: xv},
 				"y": {Values: yv},
