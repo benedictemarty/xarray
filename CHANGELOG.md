@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.12.0] — 2026-08-07
+
+Douzième version : propagation d'opérations au Dataset (Rolling, resample/temporel),
+restructuration de dimensions (squeeze/expand/rename), fonctions universelles
+(Apply/Abs/Sqrt/Clip…), et coarsen (downsampling par blocs).
+
 ### Ajouté (Sprint 50 — Coarsen)
 
 - **`DataArray.Coarsen(dim, factor)`** et **`Dataset.Coarsen(dim, factor)`** :
