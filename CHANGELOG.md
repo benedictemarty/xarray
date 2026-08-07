@@ -7,6 +7,13 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.11.0] — 2026-08-07
+
+Onzième version : comparatif lazy vs **dask** (compétitif à supérieur en
+out-of-core), réduction lazy déterministe, approfondissement du **temps**
+(composantes, climatologie mensuelle et saisonnière), et propagation d'opérations
+au **Dataset**.
+
 ### Ajouté (Sprint 45 — Propagation au Dataset)
 
 - **`Dataset.VarAxis`/`StdAxis`/`MedianAxis`** : réductions statistiques par axe
