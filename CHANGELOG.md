@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 37 — Évaluation paresseuse par chunks, esprit dask)
+
+- **Moteur lazy `LazyArray`** : opérations différées sur un tableau float64
+  découpé en chunks (le long de l'axe 0).
+  - `Chunk(da, size)` (source mémoire), `ChunkFile(...)` (source **hors-mémoire**,
+    lecture par blocs), `WriteRawF64` ; interface publique `ChunkSource`.
+  - Opérations différées `Map`/`AddScalar`/`MulScalar` ; `Compute()` matérialise
+    en parallèle (goroutines).
+  - Réductions **en streaming** `Sum`/`Mean`/`Min`/`Max` (un chunk à la fois) →
+    traitement de données **plus grandes que la RAM**.
+- Documentation : `docs/LAZY.md` (modèle, out-of-core, limites vs dask).
+
 ## [0.9.0] — 2026-08-07
 
 Neuvième version : `where`/`interpolate_na`, et un ensemble complet de réductions

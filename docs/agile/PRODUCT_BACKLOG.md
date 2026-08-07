@@ -67,6 +67,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-35 | En tant qu'utilisateur, je veux des réductions statistiques (var/std/median) et cumulatives (cumsum/diff). | P1 | ✅ Fait (S34) |
 | US-36 | En tant qu'utilisateur, je veux argmin/argmax, quantile et cumprod. | P2 | ✅ Fait (S35) |
 | US-37 | En tant qu'utilisateur, je veux idxmin/idxmax (étiquette à l'extremum). | P2 | ✅ Fait (S36) |
+| US-38 | En tant qu'utilisateur, je veux une évaluation paresseuse par chunks (out-of-core, esprit dask). | P1 | ✅ Fait (S37, MVP) |
 
 ## Dette / transverse
 
