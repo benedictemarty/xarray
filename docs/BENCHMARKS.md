@@ -101,10 +101,23 @@ Comparaison du moteur d'évaluation paresseuse (`ChunkZarr(...).Mean()`) face à
 **dask** (`dask.array.from_zarr(...).mean().compute()`), sur un même store Zarr v2
 (chunké, compression zlib), lu **hors-mémoire**.
 
-| Moyenne out-of-core (Zarr) | dask | xarray-go lazy | Rapport | Résultat |
-|----------------------------|------|----------------|---------|----------|
-| 4 M éléments (32 Mo)  | **27,9 ms** | 32,0 ms  | dask 1,14× | identique |
-| 16 M éléments (128 Mo)| 139,9 ms | **119,0 ms** | Go 1,18×   | identique |
+| Opération out-of-core (Zarr) | dask | xarray-go lazy | Rapport |
+|------------------------------|------|----------------|---------|
+| `mean`, 4 M éléments (32 Mo)  | **27,9 ms** | 32,0 ms  | dask 1,14× |
+| `mean`, 16 M éléments (128 Mo)| 139,9 ms | **119,0 ms** | Go 1,18× |
+| `mean(a*b)` (2 tableaux), 16 M | 280,9 ms | **~220 ms** | Go ~1,3× |
+
+Sur l'**expression composée multi-tableaux** `mean(a*b)` (graphe : lecture de deux
+stores + produit + réduction), xarray-go l'emporte plus nettement — le graphe Go
+n'a pas d'overhead de planification.
+
+**Précision / déterminisme** : les résultats coïncident à la **précision flottante**
+près (~4·10⁻¹³ en relatif sur les grandes sommes) car l'**ordre d'accumulation**
+diffère (Go : partiels par chunk combinés dans l'ordre ; dask : réduction en
+arbre). Ce n'est pas une erreur mais la **non-associativité** de la somme
+`float64`. La réduction lazy de xarray-go est par ailleurs rendue **déterministe**
+(partiels combinés dans l'ordre des chunks, indépendamment de l'ordonnancement des
+goroutines).
 
 **Constat** : xarray-go lazy est **compétitif avec dask**, et le **dépasse sur les
 gros volumes**. Le temps est dominé par la lecture disque + la **décompression

@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Performances (Sprint 42 — Expression composée vs dask + réduction déterministe)
+
+- **Comparatif expression multi-tableaux** `mean(a*b)` (out-of-core, 2 stores
+  Zarr) : xarray-go ~220 ms vs dask ~281 ms (~1,3× plus rapide). Le graphe lazy Go
+  n'a pas d'overhead de planification.
+- **Réduction lazy rendue déterministe** : les agrégats partiels par chunk sont
+  combinés dans l'ordre des chunks (plus de mutex), indépendamment de
+  l'ordonnancement des goroutines. Les écarts avec dask relèvent de la précision
+  flottante (ordre d'accumulation, non-associativité).
+- Harnais : `bench/lazy_expr_bench.py`, `cmd/benchexpr`.
+
 ### Ajouté (Sprint 41 — Comparatif lazy vs dask)
 
 - **Comparaison de performance lazy/out-of-core** (`docs/BENCHMARKS.md`) :

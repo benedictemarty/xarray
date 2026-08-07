@@ -181,19 +181,27 @@ func (l *LazyArray) Compute() (*DataArray[float64], error) {
 // --- Réductions en streaming (un chunk à la fois) ---------------------------
 
 func (l *LazyArray) reduce(init float64, combine func(acc, x float64) float64) (float64, int, error) {
-	acc := init
-	count := 0
-	var mu sync.Mutex
+	// Chaque chunk calcule son agrégat partiel dans une case dédiée (plages
+	// disjointes -> aucune course). On combine ensuite les partiels dans l'ordre
+	// des chunks : le résultat est ainsi DÉTERMINISTE (l'ordre d'accumulation
+	// flottante est fixé), indépendamment de l'ordonnancement des goroutines.
+	nc := l.src.NumChunks()
+	partials := make([]float64, nc)
+	counts := make([]int, nc)
 	err := l.forEachChunk(func(i int, data []float64) {
 		local := init
 		for _, x := range data {
 			local = combine(local, x)
 		}
-		mu.Lock()
-		acc = combine(acc, local)
-		count += len(data)
-		mu.Unlock()
+		partials[i] = local
+		counts[i] = len(data)
 	})
+	acc := init
+	count := 0
+	for i := 0; i < nc; i++ {
+		acc = combine(acc, partials[i])
+		count += counts[i]
+	}
 	return acc, count, err
 }
 
