@@ -31,9 +31,6 @@ func newDecompressor(m *zarrCompressorMeta) (decompressor, error) {
 	case "zlib":
 		return zlibDecompress, nil
 	case "blosc":
-		if m.Shuffle == 2 {
-			return nil, fmt.Errorf("xarray: Blosc bitshuffle (shuffle=2) non pris en charge")
-		}
 		if m.Cname != "" && m.Cname != "lz4" && m.Cname != "blosclz" {
 			return nil, fmt.Errorf("xarray: codec Blosc %q non pris en charge (lz4/blosclz)", m.Cname)
 		}
@@ -65,9 +62,6 @@ func bloscDecompress(src []byte) ([]byte, error) {
 	doShuffle := flags&0x01 != 0
 	memcpyed := flags&0x02 != 0
 	bitshuffle := flags&0x04 != 0
-	if bitshuffle {
-		return nil, fmt.Errorf("xarray: Blosc bitshuffle non pris en charge")
-	}
 
 	// Cas memcpy : le buffer contient les données ORIGINALES (non filtrées, non
 	// compressées) après l'en-tête. Pas d'unshuffle dans ce cas.
@@ -88,6 +82,8 @@ func bloscDecompress(src []byte) ([]byte, error) {
 	if len(src) < 16+4*nblocks {
 		return nil, fmt.Errorf("xarray: table d'offsets Blosc tronquée")
 	}
+	// Blosc applique le filtre (shuffle/bitshuffle) PAR BLOC : on décode puis
+	// dé-filtre chaque bloc indépendamment avant de l'assembler.
 	for b := 0; b < nblocks; b++ {
 		off := int(int32(binary.LittleEndian.Uint32(src[16+4*b : 20+4*b])))
 		if off < 0 || off > len(src) {
@@ -97,49 +93,61 @@ func bloscDecompress(src []byte) ([]byte, error) {
 		if b == nblocks-1 {
 			blkLen = nbytes - b*blocksize
 		}
-		if err := decodeBloscBlock(src[off:], out[b*blocksize:b*blocksize+blkLen], typesize); err != nil {
+		block := make([]byte, blkLen)
+		if err := decodeBloscBlock(src[off:], block, typesize, blocksize); err != nil {
 			return nil, err
 		}
-	}
-
-	if doShuffle && typesize > 1 {
-		out = unshuffle(out, typesize)
+		switch {
+		case bitshuffle:
+			ub, err := bitUnshuffle(block, typesize)
+			if err != nil {
+				return nil, err
+			}
+			block = ub
+		case doShuffle && typesize > 1:
+			block = unshuffle(block, typesize)
+		}
+		copy(out[b*blocksize:], block)
 	}
 	return out, nil
 }
 
-// decodeBloscBlock décode un bloc dans dst (dimensionné à sa taille
-// décompressée). Un bloc est fait de `nstreams` sous-flux consécutifs, chacun
-// préfixé de sa taille compressée (int32) puis des données codec (LZ4). Blosc
-// découpe en `typesize` sous-flux quand la taille le permet, sinon 1.
-func decodeBloscBlock(src, dst []byte, typesize int) error {
+// decodeBloscBlock décode un bloc dans dst (dimensionné à sa taille réelle).
+// Blosc découpe un bloc en sous-flux de `neblock = blocksize/typesize` octets
+// (règle BLOSC_MIN_BUFFERSIZE=128, basée sur blocksize et non sur la taille du
+// bloc), le dernier sous-flux portant le reliquat ; sinon un seul flux. Chaque
+// sous-flux est préfixé de sa taille compressée (int32) ; s'il vaut sa taille
+// décompressée, il est stocké brut, sinon codé en LZ4.
+func decodeBloscBlock(src, dst []byte, typesize, blocksize int) error {
 	blkLen := len(dst)
-	// Règle de découpage de Blosc (BLOSC_MIN_BUFFERSIZE = 128) : un bloc est
-	// découpé en `typesize` sous-flux (codec LZ4/BLOSCLZ) si typesize ∈ [2,16] et
-	// blkLen/typesize ≥ 128 ; sinon un seul flux. Vérifié sur des stores réels
-	// (neblock 100 → non découpé, 200/20000 → découpé).
 	const bloscMinBuffer = 128
-	nstreams := 1
-	if typesize >= 2 && typesize <= 16 && blkLen%typesize == 0 && blkLen/typesize >= bloscMinBuffer {
-		nstreams = typesize
+	// Blosc ne découpe que les blocs PLEINS (blkLen == blocksize) en `typesize`
+	// sous-flux de blocksize/typesize octets ; un bloc partiel (dernier bloc)
+	// reste un flux unique. Vérifié sur des stores réels multi-blocs.
+	neblock := blkLen // un seul flux par défaut
+	if blkLen == blocksize && typesize >= 2 && typesize <= 16 && blocksize/typesize >= bloscMinBuffer {
+		neblock = blocksize / typesize
 	}
-	neblock := blkLen / nstreams
 	sp := 0
-	for s := 0; s < nstreams; s++ {
+	for pos := 0; pos < blkLen; pos += neblock {
+		outLen := neblock
+		if pos+outLen > blkLen {
+			outLen = blkLen - pos // sécurité (ne devrait pas arriver)
+		}
 		if sp+4 > len(src) {
 			return fmt.Errorf("xarray: préfixe de sous-flux Blosc tronqué")
 		}
 		clen := int(int32(binary.LittleEndian.Uint32(src[sp : sp+4])))
 		sp += 4
 		if clen < 0 || sp+clen > len(src) {
-			return fmt.Errorf("xarray: sous-flux Blosc %d hors bornes (clen=%d)", s, clen)
+			return fmt.Errorf("xarray: sous-flux Blosc hors bornes (clen=%d)", clen)
 		}
-		out := dst[s*neblock : (s+1)*neblock]
-		if clen == neblock {
+		out := dst[pos : pos+outLen]
+		if clen == outLen {
 			// Sous-flux incompressible : stocké brut par Blosc.
 			copy(out, src[sp:sp+clen])
 		} else if err := lz4Decompress(src[sp:sp+clen], out); err != nil {
-			return fmt.Errorf("xarray: LZ4 (sous-flux %d): %w", s, err)
+			return fmt.Errorf("xarray: LZ4 (sous-flux @%d): %w", pos, err)
 		}
 		sp += clen
 	}
@@ -213,6 +221,38 @@ func lz4Decompress(src, dst []byte) error {
 		}
 	}
 	return nil
+}
+
+// bitUnshuffle inverse le bit-shuffle de Blosc : le bloc est vu comme une
+// matrice de bits (nelem × typesize*8) transposée ; on la re-transpose. Les bits
+// sont numérotés LSB-first à l'intérieur de chaque octet (convention bitshuffle).
+func bitUnshuffle(src []byte, typesize int) ([]byte, error) {
+	n := len(src)
+	if typesize < 1 || n%typesize != 0 {
+		return src, nil
+	}
+	nelem := n / typesize
+	// Le transpose de bits « plein » n'est correct que si nelem est un multiple
+	// de 8 ; Blosc traite le reliquat (nelem%8) par un chemin distinct que l'on
+	// ne décode pas encore. Erreur explicite plutôt que données fausses.
+	if nelem%8 != 0 {
+		return nil, fmt.Errorf("xarray: Blosc bitshuffle avec nelem=%d non multiple de 8 non pris en charge", nelem)
+	}
+	elemBits := typesize * 8
+	total := n * 8
+	out := make([]byte, n)
+	getBit := func(buf []byte, pos int) byte { return (buf[pos>>3] >> uint(pos&7)) & 1 }
+	for p := 0; p < total; p++ {
+		// Disposition shufflée : tous les bits d'indice `bitpos` des nelem
+		// éléments, consécutifs, pour bitpos = 0..elemBits-1.
+		bitpos := p / nelem
+		elem := p % nelem
+		if getBit(src, p) != 0 {
+			dst := elem*elemBits + bitpos
+			out[dst>>3] |= 1 << uint(dst&7)
+		}
+	}
+	return out, nil
 }
 
 // unshuffle inverse le byte-shuffle de Blosc : les octets sont regroupés par

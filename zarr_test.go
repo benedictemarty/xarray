@@ -31,6 +31,43 @@ func TestZarrReadIntDtypes(t *testing.T) {
 	}
 }
 
+// TestZarrReadBloscBitshuffle lit un store Blosc avec filtre bitshuffle
+// (shuffle=2), produit par zarr-python. v[i] = i % 16 sur 16×16.
+func TestZarrReadBloscBitshuffle(t *testing.T) {
+	da, err := ReadDataArrayZarr("testdata/zarr_blosc_bitshuffle")
+	if err != nil {
+		t.Fatalf("ReadDataArrayZarr (bitshuffle) : %v", err)
+	}
+	d := da.Data()
+	if len(d) != 256 {
+		t.Fatalf("taille = %d, attendu 256", len(d))
+	}
+	for i, x := range d {
+		if x != float64(i%16) {
+			t.Fatalf("v[%d] = %v, attendu %d (bitshuffle incorrect)", i, x, i%16)
+		}
+	}
+}
+
+// TestZarrReadBloscMultiblock lit un store Blosc dont le chunk s'étale sur
+// plusieurs blocs (dont un dernier bloc partiel, non découpé) : cas où le
+// dé-filtrage doit se faire par bloc. v[i] = i % 97 sur 200000 valeurs.
+func TestZarrReadBloscMultiblock(t *testing.T) {
+	da, err := ReadDataArrayZarr("testdata/zarr_blosc_multiblock")
+	if err != nil {
+		t.Fatalf("ReadDataArrayZarr (multiblock) : %v", err)
+	}
+	d := da.Data()
+	if len(d) != 200000 {
+		t.Fatalf("taille = %d, attendu 200000", len(d))
+	}
+	for i, x := range d {
+		if x != float64(i%97) {
+			t.Fatalf("v[%d] = %v, attendu %d (décodage multi-blocs incorrect)", i, x, i%97)
+		}
+	}
+}
+
 // TestZarrReadBloscLZ4 lit un store Zarr réel produit par zarr-python avec le
 // compresseur par défaut (Blosc/LZ4 + byte-shuffle). Fixture dans testdata/ :
 // v[i] = i % 16 sur une grille 16×16. Valide le décodeur Blosc pur Go

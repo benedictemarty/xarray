@@ -7,6 +7,20 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Corrigé/Ajouté (Sprint 66 — Blosc multi-blocs & bitshuffle)
+
+- **Correctif : décodage Blosc par bloc.** Le filtre (byte-shuffle) et le
+  découpage en sous-flux sont appliqués **par bloc**, pas sur le buffer entier.
+  Les stores dont le chunk s'étale sur **plusieurs blocs** (grands tableaux)
+  étaient mal lus (le Sprint 65 n'avait été validé que sur des chunks mono-bloc).
+  Détails validés sur stores réels : seuls les blocs **pleins** sont découpés en
+  `typesize` sous-flux ; le **dernier bloc partiel** reste un flux unique.
+- **Bitshuffle** (`shuffle=2`) désormais pris en charge (transpose de bits par
+  bloc) quand `nelem` est multiple de 8 ; sinon erreur explicite (reliquat non
+  géré). Complète le byte-shuffle.
+- Validé contre zarr-python 3.3.0 (multi-blocs 1M valeurs, bitshuffle). Tests
+  hermétiques `TestZarrReadBloscMultiblock` et `TestZarrReadBloscBitshuffle`.
+
 ### Ajouté (Sprint 65 — lecture de Zarr réels : Blosc/LZ4 + dtypes)
 
 - **Décodeur Blosc/LZ4 pur Go** (`zarr_blosc.go`) : xarray-go lit désormais les
