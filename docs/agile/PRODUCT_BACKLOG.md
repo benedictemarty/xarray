@@ -91,6 +91,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | ID    | User story | Prio | État |
 |-------|------------|------|------|
 | US-56 | En tant qu'utilisateur, je veux exporter en CoverageJSON (OGC API Coverages). | P1 | ✅ Fait (S57) |
+| US-57 | En tant qu'utilisateur, je veux un provider de données (subset bbox, position) pour un serveur OGC API Go (gogeoapi). | P1 | ✅ Fait (S58) |
 
 ## Dette / transverse
 

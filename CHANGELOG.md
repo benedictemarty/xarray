@@ -7,6 +7,15 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 58 — geoapi : sous-échantillonnage géospatial)
+
+- **`geoapi.SubsetBBox`** (sous-cube dans une emprise, via `SelRange`) et
+  **`geoapi.Position`** (valeur au point le plus proche, requête EDR *position*,
+  via `SelNearest`).
+- Clarification de positionnement (`docs/GEOAPI.md`) : **gogeoapi** (serveur OGC
+  API en Go) est un projet distinct ; `xarray-go` + `geoapi` jouent le rôle de
+  **provider de données** (comme xarray pour pygeoapi), pas de serveur.
+
 ### Ajouté (Sprint 57 — Paquet geoapi : CoverageJSON)
 
 - **Nouveau paquet `geoapi`** (briques pour un service OGC API en Go, façon
