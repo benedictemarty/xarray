@@ -93,6 +93,9 @@ func consolidateZarrMetadata(dir string) error {
 // arrays 1D nommés comme une dimension sont interprétés comme des coordonnées ;
 // les autres comme des variables de données.
 func ReadDatasetZarr(dir string) (*Dataset[float64], error) {
+	if isZarrV3(dir) {
+		return readZarrV3Dataset(dir)
+	}
 	if err := readJSONFile(filepath.Join(dir, ".zgroup"), &zgroupMeta{}); err != nil {
 		return nil, fmt.Errorf("xarray: %q n'est pas un groupe Zarr (.zgroup absent) : %w", dir, err)
 	}

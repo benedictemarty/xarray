@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -28,6 +29,56 @@ func TestZarrReadIntDtypes(t *testing.T) {
 	}
 	if !reflect.DeepEqual(cnt.Data(), []float64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}) {
 		t.Errorf("count (i4) = %v", cnt.Data())
+	}
+}
+
+// TestZarrReadV3 lit un groupe Zarr v3 (zarr.json, clés c/0/0, codec zstd par
+// défaut, coordonnées) produit par xarray. Vérifie le routage v2/v3.
+func TestZarrReadV3(t *testing.T) {
+	ds, err := ReadDatasetZarr("testdata/zarr_v3_dataset")
+	if err != nil {
+		t.Fatalf("ReadDatasetZarr (v3) : %v", err)
+	}
+	v, err := ds.Get("t2m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(v.Data(), []float64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}) {
+		t.Errorf("t2m (v3) = %v", v.Data())
+	}
+	if yv, _ := ds.Coord("y"); !reflect.DeepEqual(yv, []float64{45, 44, 43}) {
+		t.Errorf("coord y (v3) = %v", yv)
+	}
+	if xv, _ := ds.Coord("x"); !reflect.DeepEqual(xv, []float64{0, 1, 2, 3}) {
+		t.Errorf("coord x (v3) = %v", xv)
+	}
+	// dimensions issues de dimension_names v3.
+	if !reflect.DeepEqual(v.Dims(), []string{"y", "x"}) {
+		t.Errorf("dims (v3) = %v", v.Dims())
+	}
+}
+
+// TestZarrWriteZstdRoundtrip écrit un Dataset compressé en zstd et le relit.
+func TestZarrWriteZstdRoundtrip(t *testing.T) {
+	da, _ := NewDataArray([]string{"y", "x"}, []int{2, 2}, []float64{0, 1, 2, 3},
+		map[string][]float64{"y": {0, 1}, "x": {0, 1}}, "v")
+	ds, _ := NewDataset(map[string]*DataArray[float64]{"v": da})
+	dir := filepath.Join(t.TempDir(), "z.zarr")
+	if err := WriteDatasetZarr(dir, ds, ZarrZstd); err != nil {
+		t.Fatalf("WriteDatasetZarr zstd : %v", err)
+	}
+	// Le .zarray doit annoncer le compresseur zstd.
+	raw, _ := os.ReadFile(filepath.Join(dir, "v", ".zarray"))
+	if !strings.Contains(string(raw), "\"zstd\"") {
+		t.Errorf(".zarray sans compresseur zstd : %s", raw)
+	}
+	got, err := ReadDatasetZarr(dir)
+	if err != nil {
+		t.Fatalf("relecture : %v", err)
+	}
+	gv, _ := got.Get("v")
+	if !reflect.DeepEqual(gv.Data(), []float64{0, 1, 2, 3}) {
+		t.Errorf("roundtrip zstd = %v", gv.Data())
 	}
 }
 

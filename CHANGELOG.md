@@ -7,6 +7,20 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 68 — écriture zstd & lecture Zarr v3)
+
+- **Écriture Zarr compressée zstd** : nouvelle option `ZarrZstd` pour
+  `WriteDataArrayZarr`/`WriteDatasetZarr` (codec numcodecs `zstd`,
+  `{"id":"zstd","level":5}`). Complète `ZarrNone`/`ZarrZlib`. Symétrie avec la
+  lecture ; validé en aller-retour Go **et** relu exact par zarr-python 3.3.0.
+  Lecture du codec `zstd` « simple » (id `zstd`) ajoutée en regard.
+- **Lecture Zarr v3** (`zarr_v3.go`) : détection automatique (`zarr.json`) et
+  routage v2/v3. Gère le pipeline de codecs (`bytes` + `zstd`/`blosc`/`gzip`),
+  `data_type` (float/int/uint + endianité), `dimension_names`, l'encodage de clés
+  de chunk `default` (`c/0/0`), les coordonnées et les groupes. Validé sur stores
+  v3 réels (xarray/zarr-python) : Dataset zstd, array blosc, coordonnées int64.
+  Non gérés : `crc32c`, encodage de clé non standard.
+
 ### Ajouté (Sprint 67 — codec Blosc zstd)
 
 - **Codec Blosc `zstd`** pris en charge à la lecture, via

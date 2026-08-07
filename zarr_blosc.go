@@ -10,8 +10,10 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
-// zstdDec est un décodeur zstd partagé ; DecodeAll est sûr en usage concurrent.
+// zstdDec/zstdEnc : décodeur et encodeur zstd partagés. DecodeAll/EncodeAll sont
+// sûrs en usage concurrent.
 var zstdDec, _ = zstd.NewReader(nil)
+var zstdEnc, _ = zstd.NewWriter(nil)
 
 func zstdDecode(src, dst []byte) error {
 	res, err := zstdDec.DecodeAll(src, dst[:0])
@@ -47,6 +49,9 @@ func newDecompressor(m *zarrCompressorMeta) (decompressor, error) {
 	switch m.ID {
 	case "zlib":
 		return zlibDecompress, nil
+	case "zstd":
+		// Codec zstd « simple » (numcodecs "zstd"), non enveloppé dans Blosc.
+		return func(src []byte) ([]byte, error) { return zstdDec.DecodeAll(src, nil) }, nil
 	case "blosc":
 		cname := m.Cname
 		switch cname {

@@ -35,6 +35,7 @@ type ZarrCompression int
 const (
 	ZarrNone ZarrCompression = iota // aucune compression
 	ZarrZlib                        // zlib (numcodecs "zlib")
+	ZarrZstd                        // zstd (numcodecs "zstd")
 )
 
 type zarrCompressorMeta struct {
@@ -133,8 +134,11 @@ func writeZarrArrayInternal(dir string, dims []string, shape []int, data []float
 		ZarrFormat: 2, Shape: shape, Chunks: chunks, Dtype: "<f8",
 		FillValue: nil, Order: "C",
 	}
-	if comp == ZarrZlib {
+	switch comp {
+	case ZarrZlib:
 		meta.Compressor = &zarrCompressorMeta{ID: "zlib", Level: 1}
+	case ZarrZstd:
+		meta.Compressor = &zarrCompressorMeta{ID: "zstd", Level: 5}
 	}
 	if err := writeJSONFile(filepath.Join(dir, ".zarray"), meta); err != nil {
 		return err
@@ -197,7 +201,11 @@ func writeZarrArrayInternal(dir string, dims []string, shape []int, data []float
 
 // ReadDataArrayZarr lit un DataArray[float64] depuis un store Zarr v2 (dir).
 func ReadDataArrayZarr(dir string) (*DataArray[float64], error) {
-	dims, shape, data, name, coords, err := readZarrArrayInternal(dir)
+	read := readZarrArrayInternal
+	if isZarrV3(dir) {
+		read = readZarrV3Array
+	}
+	dims, shape, data, name, coords, err := read(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +463,8 @@ func decodeInt(b []byte, size int, ord binary.ByteOrder, signed bool) float64 {
 
 func writeChunk(dir string, coord []int, data []float64, comp ZarrComp) error {
 	raw := encodeF64LE(data)
-	if comp == ZarrZlib {
+	switch comp {
+	case ZarrZlib:
 		var b bytes.Buffer
 		w := zlib.NewWriter(&b)
 		if _, err := w.Write(raw); err != nil {
@@ -465,6 +474,8 @@ func writeChunk(dir string, coord []int, data []float64, comp ZarrComp) error {
 			return err
 		}
 		raw = b.Bytes()
+	case ZarrZstd:
+		raw = zstdEnc.EncodeAll(raw, nil)
 	}
 	return os.WriteFile(filepath.Join(dir, chunkKey(coord)), raw, 0o644)
 }
