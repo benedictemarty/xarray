@@ -18,10 +18,11 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
   **`FindNetCDFConverter`** (détection `nccopy`/`cdo` dans le PATH).
 - Robustesse : sans convertisseur disponible, un HDF5/CDF-2 échoue par une
   **erreur explicite** (jamais de panic ni de lecture erronée).
-- Validé de bout en bout sur un vrai fichier NetCDF-4/HDF5 (superblock v2) :
-  conversion → lecture → valeurs correctes. En l'absence de `nccopy`/`cdo` dans
-  l'environnement de test, la validation utilise xarray Python comme
-  convertisseur stand-in ; le défaut de production reste `nccopy`/`cdo`.
+- Validé de bout en bout sur un vrai fichier NetCDF-4/HDF5 (superblock v2) avec
+  le **chemin de production réel** : `nccopy` (netCDF 4.9.3) détecté
+  automatiquement par `FindNetCDFConverter`, conversion → lecture → valeurs
+  correctes (`OpenNetCDFFile(path, nil)`). Un second test couvre un convertisseur
+  stand-in (xarray Python) pour les environnements sans `nccopy`/`cdo`.
 
 ### Ajouté (Sprint 60 — attributs netCDF & décodage CF minimal)
 

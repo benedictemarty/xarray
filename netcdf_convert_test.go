@@ -40,6 +40,34 @@ func TestOpenHDF5SansConvertisseur(t *testing.T) {
 	}
 }
 
+// Chemin de PRODUCTION : convertisseur externe réel détecté dans le PATH
+// (nccopy/cdo). Skip si aucun n'est installé. Lit un vrai NetCDF-4/HDF5.
+func TestOpenHDF5ViaExternalConverter(t *testing.T) {
+	path := "/tmp/ncprobe/C_netcdf4.nc"
+	if _, err := os.Stat(path); err != nil {
+		t.Skip("fichier de sonde absent")
+	}
+	conv, name, err := FindNetCDFConverter()
+	if err != nil {
+		t.Skipf("aucun convertisseur externe (nccopy/cdo) : %v", err)
+	}
+	t.Logf("convertisseur détecté : %s", name)
+	// conv==nil path exercé : OpenNetCDFFile détecte lui-même l'outil.
+	ds, err := OpenNetCDFFile(path, nil)
+	if err != nil {
+		t.Fatalf("OpenNetCDFFile via %s : %v", name, err)
+	}
+	v, err := ds.Get("t2m")
+	if err != nil {
+		t.Fatalf("variable t2m absente : %v", err)
+	}
+	d := v.Data()
+	if len(d) != 12 || d[0] != 0 || d[11] != 11 {
+		t.Errorf("données lues via %s = %v, attendu 0..11", name, d)
+	}
+	_ = conv
+}
+
 // Validation de bout en bout : convertisseur stand-in (xarray Python, disponible
 // dans cet environnement) HDF5 -> CDF-1, puis lecture par xarray-go. Prouve que
 // le pipeline OpenNetCDFFile est correct ; en production le convertisseur serait
