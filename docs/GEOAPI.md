@@ -1,6 +1,6 @@
 # Paquet `geoapi` — servir des données xarray-go façon OGC API
 
-Le paquet `github.com/bmarty/xarray/geoapi` fournit des briques pour exposer des
+Le paquet `github.com/benedictemarty/xarray/geoapi` fournit des briques pour exposer des
 données `xarray-go` à la manière d'un serveur **OGC API** (comme *pygeoapi*, mais
 en Go). Il ne dépend que de l'API publique de xarray-go.
 

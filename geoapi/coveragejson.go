@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/bmarty/xarray"
+	"github.com/benedictemarty/xarray"
 )
 
 // Structures CoverageJSON (sous-ensemble « Grid »).

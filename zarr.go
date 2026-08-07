@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -221,12 +220,9 @@ func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float
 	if meta.Order != "" && meta.Order != "C" {
 		return nil, nil, nil, "", nil, fmt.Errorf("xarray: seul l'ordre C est pris en charge (%q)", meta.Order)
 	}
-	comp := ZarrNone
-	if meta.Compressor != nil {
-		if meta.Compressor.ID != "zlib" {
-			return nil, nil, nil, "", nil, fmt.Errorf("xarray: compresseur %q non pris en charge (aucun ou zlib)", meta.Compressor.ID)
-		}
-		comp = ZarrZlib
+	dec, err := newDecompressor(meta.Compressor)
+	if err != nil {
+		return nil, nil, nil, "", nil, err
 	}
 
 	shape = meta.Shape
@@ -254,7 +250,7 @@ func readZarrArrayInternal(dir string) (dims []string, shape []int, data []float
 
 	coord := make([]int, ndim)
 	for done := false; !done; {
-		buf, ok, rerr := readChunk(dir, coord, chunkSize, comp)
+		buf, ok, rerr := readChunk(dir, coord, chunkSize, dec)
 		if rerr != nil {
 			return nil, nil, nil, "", nil, rerr
 		}
@@ -385,7 +381,7 @@ func writeChunk(dir string, coord []int, data []float64, comp ZarrComp) error {
 	return os.WriteFile(filepath.Join(dir, chunkKey(coord)), raw, 0o644)
 }
 
-func readChunk(dir string, coord []int, n int, comp ZarrComp) ([]float64, bool, error) {
+func readChunk(dir string, coord []int, n int, dec decompressor) ([]float64, bool, error) {
 	raw, err := os.ReadFile(filepath.Join(dir, chunkKey(coord)))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -393,14 +389,8 @@ func readChunk(dir string, coord []int, n int, comp ZarrComp) ([]float64, bool, 
 		}
 		return nil, false, err
 	}
-	if comp == ZarrZlib {
-		r, err := zlib.NewReader(bytes.NewReader(raw))
-		if err != nil {
-			return nil, false, err
-		}
-		raw, err = io.ReadAll(r)
-		r.Close()
-		if err != nil {
+	if dec != nil {
+		if raw, err = dec(raw); err != nil {
 			return nil, false, err
 		}
 	}

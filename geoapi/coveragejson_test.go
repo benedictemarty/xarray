@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/bmarty/xarray"
+	"github.com/benedictemarty/xarray"
 )
 
 func TestToCoverageJSON(t *testing.T) {

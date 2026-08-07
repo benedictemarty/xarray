@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	nd "github.com/bmarty/xarray/ndarray"
+	nd "github.com/benedictemarty/xarray/ndarray"
 )
 
 func TestStandardize(t *testing.T) {

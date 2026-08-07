@@ -3,7 +3,7 @@ package ml
 import (
 	"fmt"
 
-	nd "github.com/bmarty/xarray/ndarray"
+	nd "github.com/benedictemarty/xarray/ndarray"
 )
 
 // LinearRegression est une régression linéaire y = X·w + b entraînée par

@@ -1,6 +1,6 @@
 # Paquet `ndarray` — « mini-NumPy » en Go
 
-Le paquet `github.com/bmarty/xarray/ndarray` fournit un **tableau dense
+Le paquet `github.com/benedictemarty/xarray/ndarray` fournit un **tableau dense
 N-dimensionnel de `float64`**, pensé comme moteur de calcul : spécialisé (pas de
 générique), sans closure sur le chemin chaud, avec broadcasting **positionnel
 façon NumPy** (aligné à droite, dimensions de taille 1 étirées).
@@ -105,7 +105,7 @@ La voie réaliste n'est pas de réécrire NumPy, mais :
 ## Exemple
 
 ```go
-import "github.com/bmarty/xarray/ndarray"
+import "github.com/benedictemarty/xarray/ndarray"
 
 a, _ := ndarray.New([]int{2, 3}, []float64{1, 2, 3, 4, 5, 6})
 b, _ := ndarray.New([]int{3}, []float64{10, 20, 30}) // diffusé sur les lignes

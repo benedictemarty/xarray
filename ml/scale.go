@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"math"
 
-	nd "github.com/bmarty/xarray/ndarray"
+	nd "github.com/benedictemarty/xarray/ndarray"
 )
 
 // Standardize centre-réduit chaque colonne d'une matrice de caractéristiques

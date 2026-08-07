@@ -9,7 +9,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/bmarty/xarray/experimental/eccodesgrib"
+	"github.com/benedictemarty/xarray/experimental/eccodesgrib"
 )
 
 func main() {

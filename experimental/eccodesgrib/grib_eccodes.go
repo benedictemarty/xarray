@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/bmarty/xarray"
+	"github.com/benedictemarty/xarray"
 )
 
 func getLong(h *C.codes_handle, key string) (int64, error) {

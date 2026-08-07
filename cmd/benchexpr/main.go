@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bmarty/xarray"
+	"github.com/benedictemarty/xarray"
 )
 
 func main() {

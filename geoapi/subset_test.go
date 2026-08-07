@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/bmarty/xarray"
+	"github.com/benedictemarty/xarray"
 )
 
 func grilleGeo(t *testing.T) *xarray.DataArray[float64] {

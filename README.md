@@ -14,7 +14,7 @@ L'idée : manipuler des tableaux multi-dimensionnels dont les axes portent un
 ## Installation
 
 ```bash
-go get github.com/bmarty/xarray
+go get github.com/benedictemarty/xarray
 ```
 
 ## Exemple
@@ -25,7 +25,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/bmarty/xarray"
+	"github.com/benedictemarty/xarray"
 )
 
 func main() {

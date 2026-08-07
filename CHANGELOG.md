@@ -765,5 +765,5 @@ JSON/CSV, et types génériques.
 
 ### Ajouté
 
-- Initialisation du projet : module Go `github.com/bmarty/xarray`, dépôt git,
+- Initialisation du projet : module Go `github.com/benedictemarty/xarray`, dépôt git,
   cadre de gestion agile.

@@ -13,7 +13,7 @@ type zarrRowSource struct {
 	dir       string
 	shape     []int
 	chunks    []int
-	comp      ZarrCompression
+	dec       decompressor
 	dims      []string
 	coords    map[string][]float64
 	chunkSize int // lignes par chunk lazy (axe 0)
@@ -51,7 +51,7 @@ func (z *zarrRowSource) readBlock(rowStart, rowEnd int) ([]float64, error) {
 
 	if len(z.shape) == 1 {
 		for rc := rcStart; rc <= rcEnd; rc++ {
-			cd, ok, err := readChunk(z.dir, []int{rc}, cr, z.comp)
+			cd, ok, err := readChunk(z.dir, []int{rc}, cr, z.dec)
 			if err != nil {
 				return nil, err
 			}
@@ -76,7 +76,7 @@ func (z *zarrRowSource) readBlock(rowStart, rowEnd int) ([]float64, error) {
 	ncCol := (C + cc - 1) / cc
 	for rc := rcStart; rc <= rcEnd; rc++ {
 		for cci := 0; cci < ncCol; cci++ {
-			cd, ok, err := readChunk(z.dir, []int{rc, cci}, nChunkSize, z.comp)
+			cd, ok, err := readChunk(z.dir, []int{rc, cci}, nChunkSize, z.dec)
 			if err != nil {
 				return nil, err
 			}
@@ -121,12 +121,9 @@ func ChunkZarr(dir string, chunkSize int) (*LazyArray, error) {
 	if len(meta.Shape) < 1 || len(meta.Shape) > 2 {
 		return nil, fmt.Errorf("xarray: ChunkZarr gère les tableaux 1D/2D (%dD)", len(meta.Shape))
 	}
-	comp := ZarrNone
-	if meta.Compressor != nil {
-		if meta.Compressor.ID != "zlib" {
-			return nil, fmt.Errorf("xarray: compresseur %q non géré", meta.Compressor.ID)
-		}
-		comp = ZarrZlib
+	dec, err := newDecompressor(meta.Compressor)
+	if err != nil {
+		return nil, err
 	}
 
 	var attrs zattrsMeta
@@ -140,7 +137,7 @@ func ChunkZarr(dir string, chunkSize int) (*LazyArray, error) {
 	}
 
 	src := &zarrRowSource{
-		dir: dir, shape: meta.Shape, chunks: meta.Chunks, comp: comp,
+		dir: dir, shape: meta.Shape, chunks: meta.Chunks, dec: dec,
 		dims: dims, coords: attrs.Coords, chunkSize: chunkSize,
 	}
 	return &LazyArray{src: src, name: attrs.Name}, nil

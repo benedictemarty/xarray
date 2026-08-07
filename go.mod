@@ -1,3 +1,3 @@
-module github.com/bmarty/xarray
+module github.com/benedictemarty/xarray
 
 go 1.26.5

@@ -10,7 +10,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/bmarty/xarray"
+	"github.com/benedictemarty/xarray"
 )
 
 func main() {

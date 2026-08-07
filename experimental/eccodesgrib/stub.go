@@ -8,7 +8,7 @@ package eccodesgrib
 import (
 	"fmt"
 
-	"github.com/bmarty/xarray"
+	"github.com/benedictemarty/xarray"
 )
 
 // ReadFile renvoie une erreur explicite tant que le backend ecCodes n'est pas

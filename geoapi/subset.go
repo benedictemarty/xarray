@@ -3,7 +3,7 @@ package geoapi
 import (
 	"fmt"
 
-	"github.com/bmarty/xarray"
+	"github.com/benedictemarty/xarray"
 )
 
 // BBox est une emprise spatiale (coordonnées de la grille : longitudes X,
