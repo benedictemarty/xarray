@@ -29,6 +29,44 @@ func TestSelNearest(t *testing.T) {
 	}
 }
 
+func TestSelNearestKeep(t *testing.T) {
+	da := exempleSel(t)
+	// 23 -> plus proche de 20 -> valeur 30, mais dimension CONSERVÉE (taille 1)
+	r, err := da.SelNearestKeep("lieu", 23)
+	if err != nil {
+		t.Fatalf("SelNearestKeep : %v", err)
+	}
+	if !reflect.DeepEqual(r.Data(), []float64{30}) {
+		t.Errorf("data = %v, attendu [30]", r.Data())
+	}
+	// la dimension et sa coordonnée doivent survivre (contrairement à SelNearest)
+	if c, _ := r.Coord("lieu"); !reflect.DeepEqual(c, []float64{20}) {
+		t.Errorf("coord = %v, attendu [20]", c)
+	}
+	if len(r.Dims()) != 1 {
+		t.Errorf("dims = %v, dimension supprimée à tort", r.Dims())
+	}
+}
+
+func TestSelNearestMany(t *testing.T) {
+	da := exempleSel(t)
+	// [23, 100] -> plus proches 20 et 40 -> valeurs 30 et 50, ordre conservé
+	r, err := da.SelNearestMany("lieu", []float64{23, 100})
+	if err != nil {
+		t.Fatalf("SelNearestMany : %v", err)
+	}
+	if !reflect.DeepEqual(r.Data(), []float64{30, 50}) {
+		t.Errorf("data = %v, attendu [30 50]", r.Data())
+	}
+	if c, _ := r.Coord("lieu"); !reflect.DeepEqual(c, []float64{20, 40}) {
+		t.Errorf("coord = %v, attendu [20 40]", c)
+	}
+	// liste vide -> erreur
+	if _, err := da.SelNearestMany("lieu", nil); err == nil {
+		t.Error("erreur attendue : liste vide")
+	}
+}
+
 func TestSelRange(t *testing.T) {
 	da := exempleSel(t)
 	// [10, 30] -> étiquettes 10,20,30 -> valeurs 20,30,40

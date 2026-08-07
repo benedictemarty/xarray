@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 59 — sélection *nearest* conservant la dimension)
+
+- **`DataArray.SelNearestMany(dim, labels)`** et **`DataArray.SelNearestKeep(dim, label)`** :
+  sélection au plus proche voisin qui **conserve la dimension** (taille 1),
+  reproduisant fidèlement xarray `sel(dim=[...], method="nearest")`. À l'inverse,
+  `SelNearest` (label scalaire) réduit la dimension comme `sel(dim=l)`.
+- Motivation : les exports **CoverageJSON / EDR** exigent des axes explicites ;
+  une dimension supprimée casse le domaine (Grid/PointSeries). `gocoverage`
+  s'appuie désormais sur `SelNearestKeep` au lieu d'un contournement `SelRange(n,n)`.
+- Refactorisation interne : helper `nearestIndex` partagé par `SelNearest`,
+  `SelNearestKeep` et `SelNearestMany`.
+
 ### Ajouté (Sprint 58 — geoapi : sous-échantillonnage géospatial)
 
 - **`geoapi.SubsetBBox`** (sous-cube dans une emprise, via `SelRange`) et
