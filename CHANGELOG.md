@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 32 — Indexation `sel` avancée)
+
+- **`SelNearest(dim, label)`** : sélection par plus proche voisin (dimension
+  réduite).
+- **`SelRange(dim, lo, hi)`** : sélection par plage d'étiquettes [lo, hi] (bornes
+  incluses, ordre tolérant).
+- **`SelMany(dim, labels)`** : sélection de plusieurs étiquettes (ordre respecté).
+
 ### Ajouté (Sprint 31 — Données manquantes)
 
 - **Gestion des NaN** sur `DataArray` : `CountNA`, `FillNA(value)`,

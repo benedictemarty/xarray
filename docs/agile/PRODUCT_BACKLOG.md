@@ -62,6 +62,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-30 | En tant qu'utilisateur, je veux `rolling` (fenêtre glissante) et `resample`. | P1 | ✅ Fait (S29) |
 | US-31 | En tant qu'utilisateur, je veux des coordonnées temporelles et un resample calendaire. | P1 | ✅ Fait (S30) |
 | US-32 | En tant qu'utilisateur, je veux gérer les données manquantes (fillna/dropna/ffill). | P1 | ✅ Fait (S31) |
+| US-33 | En tant qu'utilisateur, je veux une indexation par label avancée (nearest/plage/liste). | P1 | ✅ Fait (S32) |
 
 ## Dette / transverse
 
