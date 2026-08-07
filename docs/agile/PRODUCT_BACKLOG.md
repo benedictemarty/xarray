@@ -86,6 +86,12 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-54 | En tant qu'utilisateur, je veux l'arithmétique entre Datasets. | P1 | ✅ Fait (S55) |
 | US-55 | En tant qu'utilisateur, je veux isnull/notnull/count. | P2 | ✅ Fait (S56) |
 
+## Épopée 6 — Service géospatial (OGC API en Go)
+
+| ID    | User story | Prio | État |
+|-------|------------|------|------|
+| US-56 | En tant qu'utilisateur, je veux exporter en CoverageJSON (OGC API Coverages). | P1 | ✅ Fait (S57) |
+
 ## Dette / transverse
 
 | ID    | Sujet | Prio |

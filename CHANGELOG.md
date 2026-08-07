@@ -7,6 +7,15 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 57 — Paquet geoapi : CoverageJSON)
+
+- **Nouveau paquet `geoapi`** (briques pour un service OGC API en Go, façon
+  pygeoapi) : `ToCoverageJSON` sérialise un `DataArray[float64]` 2D (grille
+  latitude × longitude) au format **CoverageJSON** (domaine Grid, CRS84).
+- Documentation `docs/GEOAPI.md` : positionnement (pygeoapi = Python ; ce paquet
+  = reconstruction en Go), ce que xarray-go couvre déjà (subset/extraction) et ce
+  qui reste (endpoints OGC, CRS).
+
 ### Ajouté (Sprint 56 — Masques de nullité)
 
 - **`IsNull`/`NotNull`** : masques (1/0) des valeurs manquantes/présentes.
