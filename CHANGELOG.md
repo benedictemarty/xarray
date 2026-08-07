@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.7.0] — 2026-08-07
+
+Septième version : **backend GRIB via ecCodes** (cgo, opt-in) pour couvrir les
+templates locaux non standard (ex. 50002 Météo-France), en complément du
+décodeur pur-Go. Le cœur du projet reste 100 % Go pur.
+
 ### Ajouté (Sprint 28 — Backend GRIB via ecCodes, cas particuliers)
 
 - **Backend `experimental/eccodesgrib`** (cgo, opt-in `-tags eccodes`) :
