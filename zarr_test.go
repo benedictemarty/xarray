@@ -8,6 +8,30 @@ import (
 	"testing"
 )
 
+// TestZarrReadBloscLZ4 lit un store Zarr réel produit par zarr-python avec le
+// compresseur par défaut (Blosc/LZ4 + byte-shuffle). Fixture dans testdata/ :
+// v[i] = i % 16 sur une grille 16×16. Valide le décodeur Blosc pur Go
+// (conteneur, découpage en sous-flux, LZ4, sous-flux non compressé, unshuffle).
+func TestZarrReadBloscLZ4(t *testing.T) {
+	ds, err := ReadDatasetZarr("testdata/zarr_blosc_lz4")
+	if err != nil {
+		t.Fatalf("ReadDatasetZarr (Blosc) : %v", err)
+	}
+	v, err := ds.Get("v")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := v.Data()
+	if len(d) != 256 {
+		t.Fatalf("taille = %d, attendu 256", len(d))
+	}
+	for i, x := range d {
+		if x != float64(i%16) {
+			t.Fatalf("v[%d] = %v, attendu %d (décodage Blosc/LZ4 incorrect)", i, x, i%16)
+		}
+	}
+}
+
 // TestZarrFillValueNull vérifie que .zarray écrit fill_value: null et non 0.
 // Un fill_value numérique est interprété par xarray/zarr-python comme _FillValue
 // et masque les valeurs égales (les 0 légitimes deviendraient NaN à la lecture).
