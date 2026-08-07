@@ -95,6 +95,36 @@ chantier « porter NumPy en Go » (voir `docs/NDARRAY.md`).
   l'écart avec NumPy tombe de 2,5× à **1,6×**. Le coût dominant était bien la
   **structure d'itération** (overhead par élément), non la closure du Sprint 20.
 
+## Lazy / out-of-core : xarray-go vs dask
+
+Comparaison du moteur d'évaluation paresseuse (`ChunkZarr(...).Mean()`) face à
+**dask** (`dask.array.from_zarr(...).mean().compute()`), sur un même store Zarr v2
+(chunké, compression zlib), lu **hors-mémoire**.
+
+| Moyenne out-of-core (Zarr) | dask | xarray-go lazy | Rapport | Résultat |
+|----------------------------|------|----------------|---------|----------|
+| 4 M éléments (32 Mo)  | **27,9 ms** | 32,0 ms  | dask 1,14× | identique |
+| 16 M éléments (128 Mo)| 139,9 ms | **119,0 ms** | Go 1,18×   | identique |
+
+**Constat** : xarray-go lazy est **compétitif avec dask**, et le **dépasse sur les
+gros volumes**. Le temps est dominé par la lecture disque + la **décompression
+zlib** (identique des deux côtés) ; l'overhead du scheduler dask devient visible à
+grande échelle, là où le moteur Go (goroutines, sans planificateur) a un surcoût
+minimal. Les résultats sont **identiques** (bit à bit sur la moyenne).
+
+**Nuance honnête** : le comparatif porte sur une opération simple (`mean`). dask
+gère bien davantage — graphes de calcul arbitraires, clusters distribués, spilling
+disque, chunking N-D — là où notre moteur lazy est un MVP (1D/2D, graphe
+élément-par-élément). Sur *ce* scénario out-of-core courant, xarray-go tient
+toutefois la comparaison.
+
+Reproduire :
+
+```bash
+python3 bench/lazy_bench.py /tmp/lazy.zarr 8000 2000 800   # génère + mesure dask
+go run ./cmd/benchzarr /tmp/lazy.zarr 800                  # mesure xarray-go
+```
+
 ## Pourquoi Go n'a pas d'auto-vectorisation SIMD (comme le C de NumPy) ?
 
 NumPy est rapide parce que ses noyaux sont écrits en **C/Cython compilés avec des

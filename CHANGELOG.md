@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 41 — Comparatif lazy vs dask)
+
+- **Comparaison de performance lazy/out-of-core** (`docs/BENCHMARKS.md`) :
+  `ChunkZarr(...).Mean()` vs dask `from_zarr().mean().compute()` sur un même store
+  Zarr. Résultats identiques ; xarray-go compétitif (32 vs 28 ms à 4 M) et **plus
+  rapide sur gros volume** (119 vs 140 ms à 16 M).
+- Harnais : `bench/lazy_bench.py` (dask) et `cmd/benchzarr` (Go).
+
 ## [0.10.0] — 2026-08-07
 
 Dixième version : **moteur d'évaluation paresseuse par chunks (esprit dask)** —
