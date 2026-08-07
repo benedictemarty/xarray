@@ -7,6 +7,10 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.14.0] — 2026-08-07
+
+Quatorzième version : arithmétique entre Datasets (Add/Sub/Mul/Div + scalaires).
+
 ### Ajouté (Sprint 55 — Arithmétique entre Datasets)
 
 - **`Dataset.Add`/`Sub`/`Mul`/`Div`** : opérations variable par variable (sur les
