@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 46 — Dataset.Rolling)
+
+- **`Dataset.Rolling(dim, window)`** : fenêtre glissante propagée aux variables
+  portant la dimension (agrégations `Mean`/`Sum`/`Min`/`Max` → `Dataset[float64]`) ;
+  les variables sans la dimension sont conservées (converties).
+
 ## [0.11.0] — 2026-08-07
 
 Onzième version : comparatif lazy vs **dask** (compétitif à supérieur en
