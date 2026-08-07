@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 39 — Graphe lazy multi-tableaux)
+
+- **Combinaison paresseuse de deux `LazyArray`** : `Add`/`Sub`/`Mul`/`Div`
+  élément par élément, chunk par chunk (source `binarySource`). Formes et
+  découpages doivent coïncider.
+- Permet des expressions différées entre gros tableaux hors-mémoire (fichier,
+  Zarr) sans les charger entièrement (ex. `la.MulScalar(2).Sub(lb).Sum()`).
+
 ### Ajouté (Sprint 38 — Lazy adossé à Zarr, out-of-core standard)
 
 - **`ChunkZarr(dir, chunkSize)`** : `LazyArray` hors-mémoire adossé à un store

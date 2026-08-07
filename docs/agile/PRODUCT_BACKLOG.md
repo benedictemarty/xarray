@@ -69,6 +69,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-37 | En tant qu'utilisateur, je veux idxmin/idxmax (étiquette à l'extremum). | P2 | ✅ Fait (S36) |
 | US-38 | En tant qu'utilisateur, je veux une évaluation paresseuse par chunks (out-of-core, esprit dask). | P1 | ✅ Fait (S37, MVP) |
 | US-39 | En tant qu'utilisateur, je veux un lazy hors-mémoire adossé à Zarr. | P1 | ✅ Fait (S38) |
+| US-40 | En tant qu'utilisateur, je veux combiner deux LazyArray (graphe multi-tableaux). | P1 | ✅ Fait (S39) |
 
 ## Dette / transverse
 

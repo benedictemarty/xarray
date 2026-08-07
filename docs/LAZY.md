@@ -52,6 +52,21 @@ transformations élément par élément ; réductions globales en streaming ;
 C'est une démonstration fidèle du **modèle** (différé + chunké + streaming +
 parallèle + out-of-core), pas un portage de dask.
 
+## Combiner deux LazyArray (graphe multi-tableaux)
+
+`Add`/`Sub`/`Mul`/`Div` combinent **deux** LazyArray élément par élément, chunk
+par chunk (différé). Les deux doivent avoir la même forme et le même découpage.
+
+```go
+la, _ := xarray.ChunkFile("a.f64", dims, shape, nil, 10_000)
+lb, _ := xarray.ChunkFile("b.f64", dims, shape, nil, 10_000)
+res, _ := la.MulScalar(2).Sub(lb)   // graphe : (2·a − b), toujours différé
+total, _ := res.Sum()               // agrège sans charger a ni b entièrement
+```
+
+Deux gros tableaux (fichier ou Zarr) sont ainsi combinés avec une empreinte
+mémoire de l'ordre d'un bloc de chacun.
+
 ## Source Zarr (out-of-core sur un format standard)
 
 `ChunkZarr` adosse un `LazyArray` à un **store Zarr v2** (tableau 1D/2D, `<f8`) :
