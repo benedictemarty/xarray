@@ -7,6 +7,13 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 40 — Réductions par axe en lazy)
+
+- **`SumAxis`/`MeanAxis`/`MinAxis`/`MaxAxis` sur `LazyArray`** (tableaux 1D/2D),
+  en streaming : réduire l'axe 0 (celui du découpage) accumule entre chunks ;
+  réduire l'axe 1 réduit à l'intérieur de chaque bloc. Le résultat (plus petit)
+  est matérialisé en `DataArray[float64]`, coordonnées préservées.
+
 ### Ajouté (Sprint 39 — Graphe lazy multi-tableaux)
 
 - **Combinaison paresseuse de deux `LazyArray`** : `Add`/`Sub`/`Mul`/`Div`

@@ -70,6 +70,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-38 | En tant qu'utilisateur, je veux une évaluation paresseuse par chunks (out-of-core, esprit dask). | P1 | ✅ Fait (S37, MVP) |
 | US-39 | En tant qu'utilisateur, je veux un lazy hors-mémoire adossé à Zarr. | P1 | ✅ Fait (S38) |
 | US-40 | En tant qu'utilisateur, je veux combiner deux LazyArray (graphe multi-tableaux). | P1 | ✅ Fait (S39) |
+| US-41 | En tant qu'utilisateur, je veux des réductions par axe en lazy (streaming). | P1 | ✅ Fait (S40) |
 
 ## Dette / transverse
 
