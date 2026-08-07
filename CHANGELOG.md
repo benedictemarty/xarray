@@ -7,6 +7,13 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.10.0] — 2026-08-07
+
+Dixième version : **moteur d'évaluation paresseuse par chunks (esprit dask)** —
+opérations différées, `Compute` parallèle, réductions en streaming (globales et
+par axe), graphe multi-tableaux, et sources hors-mémoire (fichier binaire et
+store Zarr v2).
+
 ### Ajouté (Sprint 40 — Réductions par axe en lazy)
 
 - **`SumAxis`/`MeanAxis`/`MinAxis`/`MaxAxis` sur `LazyArray`** (tableaux 1D/2D),
