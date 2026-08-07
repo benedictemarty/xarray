@@ -29,7 +29,23 @@ da, _ := msgs[0].ToDataArray("champ")  // -> DataArray[float64] (latitude, longi
 - GRIB **édition 1**, autres grilles (gaussienne, Lambert…), bitmaps, compression
   JPEG2000/PNG, tables de paramètres (pas de `shortName`).
 
-Pour ces cas, la référence est **ecCodes** (ECMWF) via `cfgrib`/cgo.
+Pour ces cas, la référence est **ecCodes** (ECMWF). Un **backend ecCodes via
+cgo** est fourni (`experimental/eccodesgrib`, opt-in `-tags eccodes`) : il gère
+**tout** le GRIB, y compris les templates locaux comme le 50002, en déléguant le
+décodage à ecCodes. Voir `experimental/eccodesgrib/README.md`.
+
+### Différence entre le template local 50002 (Météo-France) et le standard 5.3
+
+- **5.2/5.3 = WMO standard**, documenté publiquement : découpage en groupes
+  général + différenciation spatiale globale. Décodable à la main (fait ici).
+- **50002 = template *local*** (numéros ≥ 50000 réservés aux centres) : portage
+  en GRIB2 du « second-order packing » historique (deux niveaux : valeurs de
+  premier ordre + résidus de second ordre). Son format binaire exact **n'est pas
+  dans la spec WMO publique** ; il vit dans les définitions d'ecCodes. Le décoder
+  à la main reviendrait à l'inventer — d'où l'usage du backend ecCodes.
+
+**Validation** : le backend ecCodes lit un vrai fichier 50002 Météo-France avec
+des valeurs **identiques** à ecCodes Python (diff max = 0,0).
 
 ## Validation
 

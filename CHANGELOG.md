@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 28 — Backend GRIB via ecCodes, cas particuliers)
+
+- **Backend `experimental/eccodesgrib`** (cgo, opt-in `-tags eccodes`) :
+  `ReadFile` délègue à la bibliothèque C ecCodes → gère **tout** le GRIB, dont les
+  **templates locaux** (ex. **50002 Météo-France**) que le décodeur pur-Go ne
+  couvre pas, sans code spécifique par template.
+- Stub pur-Go (`//go:build !eccodes`) : le cœur du projet **reste 100 % Go pur**
+  et compile sans cgo par défaut.
+- **Validé** : lecture d'un vrai fichier 50002 Météo-France → valeurs identiques à
+  ecCodes Python (diff max = 0,0). Utilitaire `cmd/readgrib-ec`.
+- Documentation : différence 50002 vs standard 5.3, stratégie hybride pur-Go /
+  ecCodes (`docs/GRIB.md`, `experimental/eccodesgrib/README.md`).
+
 ## [0.6.0] — 2026-08-07
 
 Sixième version : **lecture GRIB2** (grille lat/lon), en simple packing **et**
