@@ -32,6 +32,61 @@ func TestZarrReadIntDtypes(t *testing.T) {
 	}
 }
 
+// TestZarrWriteChunked vérifie le découpage configurable à l'écriture (v2 et v3) :
+// une grille 7×10 découpée par {y:3, x:4} produit 9 chunks et se relit à l'identique.
+func TestZarrWriteChunked(t *testing.T) {
+	data := make([]float64, 70)
+	for i := range data {
+		data[i] = float64(i)
+	}
+	ys := []float64{0, 1, 2, 3, 4, 5, 6}
+	xs := []float64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	da, _ := NewDataArray([]string{"y", "x"}, []int{7, 10}, data,
+		map[string][]float64{"y": ys, "x": xs}, "v")
+	ds, _ := NewDataset(map[string]*DataArray[float64]{"v": da})
+	spec := map[string]int{"y": 3, "x": 4} // -> 3×3 = 9 chunks
+
+	countChunks := func(varDir string) int {
+		n := 0
+		_ = filepath.Walk(varDir, func(p string, info os.FileInfo, _ error) error {
+			if info != nil && !info.IsDir() {
+				switch filepath.Base(p) {
+				case "zarr.json", ".zarray", ".zattrs":
+				default:
+					n++
+				}
+			}
+			return nil
+		})
+		return n
+	}
+
+	cases := []struct {
+		name  string
+		write func(string) error
+	}{
+		{"v2", func(d string) error { return WriteDatasetZarrChunked(d, ds, spec, ZarrZstd) }},
+		{"v3", func(d string) error { return WriteDatasetZarrV3Chunked(d, ds, spec, ZarrZstd) }},
+	}
+	for _, c := range cases {
+		dir := filepath.Join(t.TempDir(), c.name+".zarr")
+		if err := c.write(dir); err != nil {
+			t.Fatalf("%s write : %v", c.name, err)
+		}
+		if n := countChunks(filepath.Join(dir, "v")); n != 9 {
+			t.Errorf("%s : %d chunks écrits, attendu 9", c.name, n)
+		}
+		got, err := ReadDatasetZarr(dir)
+		if err != nil {
+			t.Fatalf("%s read : %v", c.name, err)
+		}
+		gv, _ := got.Get("v")
+		if !reflect.DeepEqual(gv.Data(), data) {
+			t.Errorf("%s : roundtrip chunké incorrect", c.name)
+		}
+	}
+}
+
 // TestZarrWriteV3Roundtrip écrit un Dataset au format Zarr v3 (zstd) et le relit.
 // Vérifie la structure v3 (zarr.json, node_type, dimension_names, chunk c/0/0).
 func TestZarrWriteV3Roundtrip(t *testing.T) {

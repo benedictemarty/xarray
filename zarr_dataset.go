@@ -16,10 +16,36 @@ type zgroupMeta struct {
 	ZarrFormat int `json:"zarr_format"`
 }
 
+// chunkShapeFor calcule la forme de chunk d'un array à partir d'une spec
+// « dimension → taille de chunk ». Une dimension absente de la spec (ou spec nil)
+// n'est pas découpée (chunk = taille de la dimension). Les tailles sont bornées à
+// [1, taille de la dimension].
+func chunkShapeFor(dims []string, shape []int, spec map[string]int) []int {
+	cs := make([]int, len(shape))
+	for i, d := range dims {
+		cs[i] = shape[i]
+		if v, ok := spec[d]; ok && v > 0 && v < shape[i] {
+			cs[i] = v
+		}
+		if cs[i] < 1 {
+			cs[i] = 1
+		}
+	}
+	return cs
+}
+
 // WriteDatasetZarr écrit un Dataset[float64] comme groupe Zarr v2 dans dir.
 // Chaque array est stocké en un seul chunk (taille = forme). comp choisit la
 // compression.
 func WriteDatasetZarr(dir string, ds *Dataset[float64], comp ZarrCompression) error {
+	return WriteDatasetZarrChunked(dir, ds, nil, comp)
+}
+
+// WriteDatasetZarrChunked écrit un Dataset[float64] en Zarr v2 avec un découpage
+// configurable : chunks associe un nom de dimension à une taille de chunk (façon
+// ds.chunk({...}) de xarray). Les dimensions absentes ne sont pas découpées.
+// Permet des accès partiels efficaces sur de grands tableaux.
+func WriteDatasetZarrChunked(dir string, ds *Dataset[float64], chunks map[string]int, comp ZarrCompression) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -31,17 +57,19 @@ func WriteDatasetZarr(dir string, ds *Dataset[float64], comp ZarrCompression) er
 	for name, cv := range ds.coords {
 		sub := filepath.Join(dir, name)
 		shape := cv.Shape()
-		if err := writeZarrArrayInternal(sub, []string{name}, shape, cv.Data(), name, nil, shape, comp); err != nil {
+		cs := chunkShapeFor([]string{name}, shape, chunks)
+		if err := writeZarrArrayInternal(sub, []string{name}, shape, cv.Data(), name, nil, cs, comp); err != nil {
 			return err
 		}
 	}
 
-	// Variables de données : un array chacune (un seul chunk).
+	// Variables de données.
 	for _, name := range ds.VarNames() {
 		da := ds.vars[name]
 		sub := filepath.Join(dir, name)
 		shape := da.variable.Shape()
-		if err := writeZarrArrayInternal(sub, da.variable.Dims(), shape, da.variable.data, name, nil, shape, comp); err != nil {
+		cs := chunkShapeFor(da.variable.Dims(), shape, chunks)
+		if err := writeZarrArrayInternal(sub, da.variable.Dims(), shape, da.variable.data, name, nil, cs, comp); err != nil {
 			return err
 		}
 	}

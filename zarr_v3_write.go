@@ -74,19 +74,27 @@ func WriteDataArrayZarrV3(dir string, da *DataArray[float64], chunks []int, comp
 // WriteDatasetZarrV3 écrit un Dataset comme groupe Zarr v3 (un array par
 // coordonnée et par variable, chacun en un seul chunk).
 func WriteDatasetZarrV3(dir string, ds *Dataset[float64], comp ZarrCompression) error {
+	return WriteDatasetZarrV3Chunked(dir, ds, nil, comp)
+}
+
+// WriteDatasetZarrV3Chunked écrit un Dataset en Zarr v3 avec un découpage
+// configurable (chunks : dimension → taille de chunk, façon ds.chunk({...})).
+func WriteDatasetZarrV3Chunked(dir string, ds *Dataset[float64], chunks map[string]int, comp ZarrCompression) error {
 	if err := writeV3Group(dir); err != nil {
 		return err
 	}
 	for name, cv := range ds.coords {
 		shape := cv.Shape()
-		if err := writeV3Array(filepath.Join(dir, name), []string{name}, shape, cv.data, shape, comp); err != nil {
+		cs := chunkShapeFor([]string{name}, shape, chunks)
+		if err := writeV3Array(filepath.Join(dir, name), []string{name}, shape, cv.data, cs, comp); err != nil {
 			return err
 		}
 	}
 	for _, name := range ds.VarNames() {
 		da := ds.vars[name]
 		shape := da.variable.Shape()
-		if err := writeV3Array(filepath.Join(dir, name), da.variable.Dims(), shape, da.variable.data, shape, comp); err != nil {
+		cs := chunkShapeFor(da.variable.Dims(), shape, chunks)
+		if err := writeV3Array(filepath.Join(dir, name), da.variable.Dims(), shape, da.variable.data, cs, comp); err != nil {
 			return err
 		}
 	}

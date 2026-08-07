@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 70 — découpage configurable à l'écriture Zarr)
+
+- **`WriteDatasetZarrChunked`** (v2) et **`WriteDatasetZarrV3Chunked`** (v3) :
+  écriture avec un découpage paramétrable via `chunks map[string]int`
+  (dimension → taille de chunk, façon `ds.chunk({...})` de xarray). Les
+  dimensions absentes de la spec ne sont pas découpées ; tailles bornées à
+  `[1, taille de la dimension]`. Permet des accès partiels efficaces sur de
+  grands tableaux. `WriteDatasetZarr`/`WriteDatasetZarrV3` délèguent avec `nil`
+  (un seul chunk, comportement inchangé).
+- Validé : une grille 7×10 découpée `{y:3, x:4}` produit **9 chunks** (3×3),
+  relue à l'identique en Go **et** par zarr-python 3.3.0 (`chunks=(3,4)`), en v2
+  comme en v3. Test `TestZarrWriteChunked`.
+
 ### Ajouté (Sprint 69 — écriture Zarr v3)
 
 - **`WriteDataArrayZarrV3`/`WriteDatasetZarrV3`** : xarray-go produit désormais
