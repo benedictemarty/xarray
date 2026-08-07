@@ -7,6 +7,16 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 30 — Gestion du temps + resample calendaire)
+
+- **Coordonnées temporelles** : `EpochSeconds`/`TimeFromEpoch`/`EpochCoord`
+  (temps ↔ secondes epoch UTC, `float64`).
+- **`ResampleCalendar(da, dim, period)`** : rééchantillonnage par période
+  **civile** (`PeriodHour`/`PeriodDay`/`PeriodMonth`/`PeriodYear`) — équivalent
+  de `resample('1M'/'1Y'…).mean()` de xarray ; les étiquettes sont les débuts de
+  période. Réutilise `Resample`.
+- Note : précision ~microseconde (float64), pas de calendriers non standard.
+
 ### Ajouté (Sprint 29 — Rolling et Resample)
 
 - **`DataArray.Rolling(dim, window)`** : fenêtre glissante « trailing » le long

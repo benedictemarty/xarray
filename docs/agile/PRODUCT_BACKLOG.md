@@ -60,6 +60,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-28 | En tant qu'utilisateur, je veux lire le GRIB2 complex packing (templates 5.2/5.3). | P2 | ✅ Fait (S27, validé ecCodes) |
 | US-29 | En tant qu'utilisateur, je veux lire les templates GRIB locaux (ex. 50002). | P2 | ✅ Fait (S28, backend ecCodes) |
 | US-30 | En tant qu'utilisateur, je veux `rolling` (fenêtre glissante) et `resample`. | P1 | ✅ Fait (S29) |
+| US-31 | En tant qu'utilisateur, je veux des coordonnées temporelles et un resample calendaire. | P1 | ✅ Fait (S30) |
 
 ## Dette / transverse
 
