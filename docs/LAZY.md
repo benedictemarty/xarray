@@ -52,8 +52,23 @@ transformations élément par élément ; réductions globales en streaming ;
 C'est une démonstration fidèle du **modèle** (différé + chunké + streaming +
 parallèle + out-of-core), pas un portage de dask.
 
+## Source Zarr (out-of-core sur un format standard)
+
+`ChunkZarr` adosse un `LazyArray` à un **store Zarr v2** (tableau 1D/2D, `<f8`) :
+chaque bloc de lignes est reconstruit en ne lisant que les **chunks Zarr** qui le
+recouvrent — un tableau Zarr de plusieurs Go peut donc être agrégé avec une
+empreinte mémoire de l'ordre d'un bloc.
+
+```go
+_ = xarray.WriteDataArrayZarr("data.zarr", da, []int{1000, 50}, xarray.ZarrZlib)
+lz, _ := xarray.ChunkZarr("data.zarr", 1000)   // blocs lazy de 1000 lignes
+moy, _ := lz.Mean()                            // streaming, ne charge que ~1 bloc
+```
+
+Comme le store est du Zarr v2 standard, il est **interopérable** (écrit/lu aussi
+par zarr-python — cf. `docs/ZARR.md`).
+
 ## Implémenter une autre source
 
 Il suffit d'implémenter l'interface `ChunkSource` (Dims/Shape/Coords/NumChunks/
-ChunkRows/ChunkData). On pourrait par exemple adosser un `LazyArray` à un store
-Zarr en lisant ses chunks à la demande.
+ChunkRows/ChunkData) — comme le font `memSource`, `fileSource` et `zarrRowSource`.

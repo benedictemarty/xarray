@@ -7,6 +7,15 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 38 — Lazy adossé à Zarr, out-of-core standard)
+
+- **`ChunkZarr(dir, chunkSize)`** : `LazyArray` hors-mémoire adossé à un store
+  Zarr v2 (tableaux 1D/2D, `<f8`). Chaque bloc de lignes est reconstruit en ne
+  lisant que les chunks Zarr qui le recouvrent → agrégation de tableaux plus
+  grands que la RAM sur un format **standard et interopérable**.
+- Source `zarrRowSource` (implémente `ChunkSource`), gère chunks non alignés et
+  compression zlib.
+
 ### Ajouté (Sprint 37 — Évaluation paresseuse par chunks, esprit dask)
 
 - **Moteur lazy `LazyArray`** : opérations différées sur un tableau float64
