@@ -1,0 +1,6 @@
+{
+  "crs_wkt": "GEOGCS[\"WGS 84\"]",
+  "spatial_ref": "EPSG:4326",
+  "GeoTransform": "-10.0 0.25 0.0 50.0 0.0 -0.25",
+  "_ARRAY_DIMENSIONS": []
+}

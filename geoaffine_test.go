@@ -67,6 +67,51 @@ func TestGeoreference(t *testing.T) {
 	}
 }
 
+func TestParseGDALGeoTransform(t *testing.T) {
+	tr, err := ParseGDALGeoTransform("-10.0 0.25 0.0 50.0 0.0 -0.25")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tr != (Affine{A: 0.25, B: 0, C: -10, D: 0, E: -0.25, F: 50}) {
+		t.Errorf("affine = %+v", tr)
+	}
+	if _, err := ParseGDALGeoTransform("1 2 3"); err == nil {
+		t.Error("erreur attendue : nombre de champs incorrect")
+	}
+}
+
+// TestGeoRefFromCF lit un Zarr géoréférencé (convention rioxarray/CF :
+// spatial_ref + GeoTransform + grid_mapping) et vérifie l'extraction automatique
+// du CRS et de l'affine, puis leur application aux coordonnées.
+func TestGeoRefFromCF(t *testing.T) {
+	ds, err := ReadDatasetZarr("testdata/zarr_georef")
+	if err != nil {
+		t.Fatalf("ReadDatasetZarr : %v", err)
+	}
+	gr, ok := ds.GeoRefFromCF("B04")
+	if !ok {
+		t.Fatal("géoréférencement CF non extrait")
+	}
+	if gr.CRS != "EPSG:4326" {
+		t.Errorf("CRS = %q", gr.CRS)
+	}
+	if gr.Transform != (Affine{A: 0.25, B: 0, C: -10, D: 0, E: -0.25, F: 50}) {
+		t.Errorf("affine = %+v", gr.Transform)
+	}
+	b, _ := ds.Get("B04")
+	g, err := b.Georeference(gr, "x", "y")
+	if err != nil {
+		t.Fatalf("Georeference : %v", err)
+	}
+	if xs, _ := g.Coord("x"); !reflect.DeepEqual(xs, []float64{-9.875, -9.625, -9.375, -9.125}) {
+		t.Errorf("coord x = %v", xs)
+	}
+	// Variable sans grid_mapping -> non trouvé.
+	if _, ok := ds.GeoRefFromCF("spatial_ref"); ok {
+		t.Error("grid_mapping inexistant devrait donner ok=false")
+	}
+}
+
 func TestGeoCoordsRotationRejected(t *testing.T) {
 	// Rotation (B != 0) -> pas d'axes 1D séparables.
 	if _, _, err := GeoCoords(Affine{A: 1, B: 0.1, D: 0, E: 1}, 4, 4); err == nil {

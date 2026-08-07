@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 73 — géoréférencement automatique depuis les métadonnées CF)
+
+- **`ParseGDALGeoTransform`** : lit une chaîne GeoTransform GDAL
+  « x0 dx rx y0 ry dy » en `Affine`.
+- **`Dataset.GeoRefFromCF(varName)`** : extrait automatiquement le
+  géoréférencement d'une variable via la convention CF/rioxarray — l'attribut
+  `grid_mapping` désigne une variable de CRS portant `crs_wkt`/`spatial_ref` et
+  `GeoTransform`. Renvoie un `GeoRef` prêt pour `DataArray.Georeference`.
+- Ferme la boucle satellite : le CRS et l'affine sont désormais **lus depuis le
+  fichier** (plus besoin de les fournir à la main). Validé sur une fixture Zarr à
+  la convention rioxarray (`testdata/zarr_georef`). Test `TestGeoRefFromCF`.
+
 ### Ajouté (Sprint 72 — géoréférencement raster : affine + CRS)
 
 - **`Affine`** (géotransformation 2D, convention `affine`/GDAL) : `Apply`

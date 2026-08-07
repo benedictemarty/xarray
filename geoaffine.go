@@ -1,6 +1,10 @@
 package xarray
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // Géoréférencement raster : géotransformation affine (pixel ↔ monde) et système
 // de coordonnées de référence (CRS) traité comme identifiant opaque
@@ -116,4 +120,56 @@ func toT[T Number](xs []float64) []T {
 		out[i] = T(x)
 	}
 	return out
+}
+
+// ParseGDALGeoTransform lit une chaîne GeoTransform GDAL « x0 dx rx y0 ry dy »
+// (telle qu'écrite par GDAL/rioxarray dans l'attribut GeoTransform) en Affine.
+func ParseGDALGeoTransform(s string) (Affine, error) {
+	fields := strings.Fields(s)
+	if len(fields) != 6 {
+		return Affine{}, fmt.Errorf("xarray: GeoTransform attend 6 valeurs, %d trouvées", len(fields))
+	}
+	var gt [6]float64
+	for i, f := range fields {
+		v, err := strconv.ParseFloat(f, 64)
+		if err != nil {
+			return Affine{}, fmt.Errorf("xarray: GeoTransform champ %d invalide: %w", i, err)
+		}
+		gt[i] = v
+	}
+	return FromGDAL(gt), nil
+}
+
+// GeoRefFromCF extrait le géoréférencement d'une variable de données à partir des
+// métadonnées CF (convention rioxarray/GDAL) : l'attribut `grid_mapping` de la
+// variable nomme une variable de CRS portant `crs_wkt`/`spatial_ref` (identifiant
+// du CRS) et `GeoTransform` (géotransformation GDAL). Renvoie le GeoRef et true
+// si une géotransformation exploitable a été trouvée.
+func (ds *Dataset[T]) GeoRefFromCF(name string) (GeoRef, bool) {
+	da, err := ds.Get(name)
+	if err != nil {
+		return GeoRef{}, false
+	}
+	gm := da.variable.Attrs()["grid_mapping"]
+	if gm == "" {
+		return GeoRef{}, false
+	}
+	crsVar, err := ds.Get(gm)
+	if err != nil {
+		return GeoRef{}, false
+	}
+	at := crsVar.variable.Attrs()
+	crs := at["spatial_ref"]
+	if crs == "" {
+		crs = at["crs_wkt"]
+	}
+	gt := at["GeoTransform"]
+	if gt == "" {
+		return GeoRef{CRS: crs}, false
+	}
+	tr, err := ParseGDALGeoTransform(gt)
+	if err != nil {
+		return GeoRef{CRS: crs}, false
+	}
+	return GeoRef{Transform: tr, CRS: crs}, true
 }
