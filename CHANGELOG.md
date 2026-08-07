@@ -7,6 +7,15 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 43 — Composantes temporelles et groupby par composante)
+
+- **`ExtractTime(coord, comp)`** : extrait une composante calendaire
+  (`CompYear`/`CompMonth`/`CompDay`/`CompHour`/`CompMinute`/`CompWeekday`/
+  `CompDayOfYear`) d'une coordonnée en secondes epoch.
+- **`GroupByTime(da, dim, comp)`** : regroupement par composante temporelle —
+  équivalent de `groupby("time.month")` de xarray (climatologie). Réunit p. ex.
+  tous les mois de janvier, quelle que soit l'année ; agrégations Sum/Mean/Min/Max.
+
 ### Performances (Sprint 42 — Expression composée vs dask + réduction déterministe)
 
 - **Comparatif expression multi-tableaux** `mean(a*b)` (out-of-core, 2 stores
