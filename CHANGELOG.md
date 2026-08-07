@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 49 — Fonctions universelles)
+
+- **`Apply(fn)`** : fonction arbitraire élément par élément (dimensions et
+  coordonnées préservées).
+- **ufuncs mathématiques** : `Abs`, `Clip(lo, hi)`, `Sqrt`, `Exp`, `Log`,
+  `Pow(p)`. Les transcendantes passent par float64 (troncature vers T pour les
+  entiers).
+
 ### Ajouté (Sprint 48 — Restructuration de dimensions)
 
 - **`Squeeze(dim)`** : supprime une dimension de taille 1 (et sa coordonnée).
