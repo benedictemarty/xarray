@@ -19,7 +19,24 @@ const (
 	CompMinute
 	CompWeekday   // 0 = dimanche … 6 = samedi
 	CompDayOfYear // 1..366
+	CompSeason    // 0 = DJF (hiver), 1 = MAM, 2 = JJA, 3 = SON
 )
+
+// SeasonName renvoie le nom court d'une saison météorologique (0..3).
+func SeasonName(s int) string {
+	switch s {
+	case 0:
+		return "DJF"
+	case 1:
+		return "MAM"
+	case 2:
+		return "JJA"
+	case 3:
+		return "SON"
+	default:
+		return "?"
+	}
+}
 
 func componentOf(sec float64, c TimeComponent) int {
 	t := TimeFromEpoch(sec)
@@ -36,8 +53,10 @@ func componentOf(sec float64, c TimeComponent) int {
 		return t.Minute()
 	case CompWeekday:
 		return int(t.Weekday())
-	default: // CompDayOfYear
+	case CompDayOfYear:
 		return t.YearDay()
+	default: // CompSeason : DJF=0, MAM=1, JJA=2, SON=3 (saison météorologique)
+		return (int(t.Month()) % 12) / 3
 	}
 }
 

@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 44 — Groupby saisonnier)
+
+- **`CompSeason`** : composante saison météorologique (0=DJF, 1=MAM, 2=JJA,
+  3=SON), utilisable avec `GroupByTime`/`ExtractTime`. `SeasonName(int)` donne le
+  nom court. Couvre l'analyse climatologique **saisonnière** (`groupby("time.season")`).
+
 ### Ajouté (Sprint 43 — Composantes temporelles et groupby par composante)
 
 - **`ExtractTime(coord, comp)`** : extrait une composante calendaire
