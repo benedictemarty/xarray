@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.8.0] — 2026-08-07
+
+Huitième version : **étage analyse** — `rolling`/`resample`, coordonnées
+temporelles et resample calendaire, gestion des données manquantes
+(`fillna`/`dropna`/`ffill`), et indexation `sel` avancée (nearest/plage/liste).
+
 ### Ajouté (Sprint 32 — Indexation `sel` avancée)
 
 - **`SelNearest(dim, label)`** : sélection par plus proche voisin (dimension
