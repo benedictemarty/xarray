@@ -7,6 +7,20 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 72 — géoréférencement raster : affine + CRS)
+
+- **`Affine`** (géotransformation 2D, convention `affine`/GDAL) : `Apply`
+  (pixel→monde), `Inverse` (monde→pixel), `FromGDAL`/`GDAL` (GeoTransform à
+  6 coefficients). Validé contre la bibliothèque `affine` (rasterio).
+- **`GeoRef{Transform, CRS}`** et **`DataArray.Georeference(gr, xDim, yDim)`** :
+  attache des coordonnées monde (**centres de pixels**) aux axes x/y d'un raster
+  2D et transporte le **CRS** (identifiant opaque : `EPSG:xxxx`/WKT/proj) dans
+  l'attribut `crs`. **`GeoCoords`** génère les axes 1D (grille sans rotation ;
+  rotation refusée par erreur explicite).
+- Périmètre assumé : mapping pixel↔coordonnées + transport du CRS ; **pas de
+  reprojection** (nécessiterait PROJ). Complète le décodage CF pour l'imagerie
+  satellite (localiser les pixels après dépacking). Tests `geoaffine_test.go`.
+
 ### Ajouté (Sprint 71 — attributs CF à la lecture Zarr → dépacking satellite)
 
 - **Capture des attributs `.zattrs` (v2) et `attributes` (v3)** dans
