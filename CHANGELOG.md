@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 55 — Arithmétique entre Datasets)
+
+- **`Dataset.Add`/`Sub`/`Mul`/`Div`** : opérations variable par variable (sur les
+  variables de même nom, via l'arithmétique DataArray). **`AddScalar`/`MulScalar`**
+  s'appliquent à toutes les variables.
+
 ## [0.13.0] — 2026-08-07
 
 Treizième version : coordonnées textuelles (stations/catégories), `groupby_bins`
