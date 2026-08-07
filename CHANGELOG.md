@@ -7,6 +7,25 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 60 — attributs netCDF & décodage CF minimal)
+
+- **Lecture/écriture des attributs netCDF** (globaux et de variable) dans le
+  lecteur CDF-1 : types `NC_CHAR` et numériques. Les attributs de variable
+  alimentent désormais `Variable.attrs` (`units`, `long_name`, `scale_factor`…).
+  Auparavant les listes d'attributs étaient supposées ABSENT, ce qui
+  désynchronisait l'analyse de tout fichier réel portant des attributs.
+- **`DecodeCF(*Dataset[float64])`** — décodage du *packing* CF façon
+  `xarray.decode_cf` : valeur = brut × `scale_factor` + `add_offset`, et
+  `_FillValue`/`missing_value` → NaN ; les attributs consommés sont retirés.
+- **`DecodeTime(*Dataset[float64], dim)`** et **`DecodeCFTime([]float64, units)`**
+  — décodage de l'axe temporel CF « `<unité> since <date>` » (seconds/minutes/
+  hours/days) vers des secondes depuis l'epoch Unix.
+- **Durcissement du lecteur** : les cas hors périmètre sont refusés par une
+  erreur explicite (dimension d'enregistrement illimitée, `numrecs` ≠ 0)
+  plutôt que par un panic.
+- Motivation : rendre `gocoverage` capable de charger des netCDF portant des
+  métadonnées CF réelles (unités pour `get_fields`, valeurs dépackées, temps).
+
 ### Ajouté (Sprint 59 — sélection *nearest* conservant la dimension)
 
 - **`DataArray.SelNearestMany(dim, labels)`** et **`DataArray.SelNearestKeep(dim, label)`** :
