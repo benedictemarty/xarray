@@ -82,6 +82,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-50 | En tant qu'utilisateur, je veux des coordonnées textuelles (stations, catégories). | P1 | ✅ Fait (S51) |
 | US-51 | En tant qu'utilisateur, je veux groupby_bins (intervalles arbitraires). | P1 | ✅ Fait (S52) |
 | US-52 | En tant qu'utilisateur, je veux Dot (contraction tensorielle nommée). | P2 | ✅ Fait (S53) |
+| US-53 | En tant qu'utilisateur, je veux plus d'ufuncs (round/sign/trig, maximum/minimum). | P2 | ✅ Fait (S54) |
 
 ## Dette / transverse
 
