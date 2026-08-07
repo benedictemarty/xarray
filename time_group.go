@@ -1,9 +1,6 @@
 package xarray
 
-import (
-	"fmt"
-	"sort"
-)
+import "fmt"
 
 // Composantes temporelles et regroupement par composante (climatologie), à la
 // manière de `ds.groupby("time.month")` de xarray.
@@ -80,22 +77,6 @@ func GroupByTime[T Number](da *DataArray[T], dim string, c TimeComponent) (*Resa
 	if !ok {
 		return nil, fmt.Errorf("xarray: groupby temporel impossible : aucune coordonnée %q", dim)
 	}
-	byComp := map[int][]int{}
-	var order []int
-	for i, l := range cv.data {
-		k := componentOf(float64(l), c)
-		if _, seen := byComp[k]; !seen {
-			order = append(order, k)
-		}
-		byComp[k] = append(byComp[k], i)
-	}
-	sort.Ints(order)
-
-	labels := make([]T, len(order))
-	groups := make([][]int, len(order))
-	for idx, k := range order {
-		labels[idx] = T(k)
-		groups[idx] = byComp[k]
-	}
+	labels, groups := componentGroups(cv.data, c)
 	return &Resample[T]{da: da, dim: dim, labels: labels, groups: groups}, nil
 }

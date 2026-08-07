@@ -2,7 +2,6 @@ package xarray
 
 import (
 	"fmt"
-	"sort"
 	"time"
 )
 
@@ -67,23 +66,6 @@ func ResampleCalendar[T Number](da *DataArray[T], dim string, p Period) (*Resamp
 	if !ok {
 		return nil, fmt.Errorf("xarray: resample temporel impossible : aucune coordonnée %q", dim)
 	}
-	groupsByKey := map[int64][]int{}
-	var order []int64
-	for i, l := range cv.data {
-		start := periodStart(TimeFromEpoch(float64(l)), p)
-		k := start.Unix()
-		if _, seen := groupsByKey[k]; !seen {
-			order = append(order, k)
-		}
-		groupsByKey[k] = append(groupsByKey[k], i)
-	}
-	sort.Slice(order, func(i, j int) bool { return order[i] < order[j] })
-
-	labels := make([]T, len(order))
-	groups := make([][]int, len(order))
-	for idx, k := range order {
-		labels[idx] = T(k) // début de période, en secondes epoch
-		groups[idx] = groupsByKey[k]
-	}
+	labels, groups := calendarGroups(cv.data, p)
 	return &Resample[T]{da: da, dim: dim, labels: labels, groups: groups}, nil
 }

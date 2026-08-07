@@ -7,6 +7,15 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 47 — Resample/temporel au Dataset)
+
+- **`Dataset.Resample(dim, freq)`**, **`Dataset.ResampleCalendar(dim, period)`**,
+  **`Dataset.GroupByTime(dim, comp)`** : rééchantillonnage et regroupement
+  temporel propagés à toutes les variables (via `DatasetGroupBy` : Sum/Mean/Min/Max).
+- Refactorisation : helpers `binGroups`/`calendarGroups`/`componentGroups`
+  mutualisés entre les niveaux DataArray et Dataset (suppression de la
+  duplication).
+
 ### Ajouté (Sprint 46 — Dataset.Rolling)
 
 - **`Dataset.Rolling(dim, window)`** : fenêtre glissante propagée aux variables

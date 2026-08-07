@@ -1,10 +1,6 @@
 package xarray
 
-import (
-	"fmt"
-	"math"
-	"sort"
-)
+import "fmt"
 
 // Resample regroupe les valeurs le long d'une dimension par intervalles réguliers
 // de sa coordonnée (de largeur freq), à la manière de xarray.DataArray.resample.
@@ -30,33 +26,7 @@ func (da *DataArray[T]) Resample(dim string, freq T) (*Resample[T], error) {
 	if float64(freq) <= 0 {
 		return nil, fmt.Errorf("xarray: pas de rééchantillonnage invalide %v", freq)
 	}
-	labels := cv.data
-	origin := labels[0]
-	for _, l := range labels {
-		if l < origin {
-			origin = l
-		}
-	}
-	binOf := func(l T) int64 {
-		return int64(math.Floor(float64(l-origin) / float64(freq)))
-	}
-	m := map[int64][]int{}
-	var order []int64
-	for i, l := range labels {
-		b := binOf(l)
-		if _, seen := m[b]; !seen {
-			order = append(order, b)
-		}
-		m[b] = append(m[b], i)
-	}
-	sort.Slice(order, func(i, j int) bool { return order[i] < order[j] })
-
-	binLabels := make([]T, len(order))
-	groups := make([][]int, len(order))
-	for k, b := range order {
-		binLabels[k] = origin + T(b)*freq
-		groups[k] = m[b]
-	}
+	binLabels, groups := binGroups(cv.data, freq)
 	return &Resample[T]{da: da, dim: dim, labels: binLabels, groups: groups}, nil
 }
 

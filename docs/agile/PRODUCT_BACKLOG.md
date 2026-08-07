@@ -75,6 +75,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-43 | En tant qu'utilisateur, je veux un groupby saisonnier (DJF/MAM/JJA/SON). | P2 | ✅ Fait (S44) |
 | US-44 | En tant qu'utilisateur, je veux les stats/fillna/cumsum au niveau Dataset. | P1 | ✅ Fait (S45) |
 | US-45 | En tant qu'utilisateur, je veux Rolling au niveau Dataset. | P2 | ✅ Fait (S46) |
+| US-46 | En tant qu'utilisateur, je veux Resample/ResampleCalendar/GroupByTime au Dataset. | P1 | ✅ Fait (S47) |
 
 ## Dette / transverse
 
