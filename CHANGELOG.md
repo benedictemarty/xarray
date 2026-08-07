@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 56 — Masques de nullité)
+
+- **`IsNull`/`NotNull`** : masques (1/0) des valeurs manquantes/présentes.
+- **`Count`** (nombre de valeurs non-NaN) et **`CountAxis(dim)`** (comptage le
+  long d'une dimension).
+
 ## [0.14.0] — 2026-08-07
 
 Quatorzième version : arithmétique entre Datasets (Add/Sub/Mul/Div + scalaires).
