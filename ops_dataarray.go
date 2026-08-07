@@ -190,7 +190,23 @@ func (da *DataArray[T]) takeAlong(dim string, indices []int) (*DataArray[T], err
 		nc := cv.cloneVar()
 		coords[k] = nc
 	}
-	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, nil
+	// Coordonnées textuelles : réindexer celle de dim, copier les autres.
+	var strCoords map[string][]string
+	for k, v := range da.strCoords {
+		if strCoords == nil {
+			strCoords = map[string][]string{}
+		}
+		if k == dim {
+			sub := make([]string, len(indices))
+			for i, idx := range indices {
+				sub[i] = v[idx]
+			}
+			strCoords[k] = sub
+		} else {
+			strCoords[k] = append([]string(nil), v...)
+		}
+	}
+	return &DataArray[T]{variable: nv, coords: coords, strCoords: strCoords, name: da.name}, nil
 }
 
 // --- Arithmétique -----------------------------------------------------------

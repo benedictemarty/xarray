@@ -17,7 +17,11 @@ type DataArray[T Number] struct {
 	// coordonnées dites « de dimension » sont gérées : leur nom est celui d'une
 	// dimension et leur longueur correspond à la taille de cette dimension.
 	coords map[string]*Variable[T]
-	name   string
+	// strCoords porte les coordonnées **textuelles** (ex. noms de stations,
+	// catégories) : une dimension peut avoir une coordonnée numérique ou string.
+	// Les données restent numériques (T) ; seules les étiquettes sont du texte.
+	strCoords map[string][]string
+	name      string
 }
 
 // NewDataArray construit un DataArray.
@@ -99,7 +103,19 @@ func (da *DataArray[T]) clone() *DataArray[T] {
 		coords[k] = nv
 	}
 	nv := da.variable.cloneVar()
-	return &DataArray[T]{variable: nv, coords: coords, name: da.name}
+	return &DataArray[T]{variable: nv, coords: coords, strCoords: cloneStrCoords(da.strCoords), name: da.name}
+}
+
+// cloneStrCoords copie une carte de coordonnées textuelles.
+func cloneStrCoords(m map[string][]string) map[string][]string {
+	if len(m) == 0 {
+		return nil
+	}
+	out := make(map[string][]string, len(m))
+	for k, v := range m {
+		out[k] = append([]string(nil), v...)
+	}
+	return out
 }
 
 // Isel sélectionne par position entière le long d'une dimension. La dimension
@@ -117,7 +133,18 @@ func (da *DataArray[T]) Isel(dim string, index int) (*DataArray[T], error) {
 		ncv := cv.cloneVar()
 		coords[k] = ncv
 	}
-	return &DataArray[T]{variable: nv, coords: coords, name: da.name}, nil
+	// Coordonnées textuelles : la dimension réduite disparaît, les autres restent.
+	var strCoords map[string][]string
+	for k, v := range da.strCoords {
+		if k == dim {
+			continue
+		}
+		if strCoords == nil {
+			strCoords = map[string][]string{}
+		}
+		strCoords[k] = append([]string(nil), v...)
+	}
+	return &DataArray[T]{variable: nv, coords: coords, strCoords: strCoords, name: da.name}, nil
 }
 
 // Sel sélectionne par label le long d'une dimension : l'étiquette est recherchée
