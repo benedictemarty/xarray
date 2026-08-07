@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 69 — écriture Zarr v3)
+
+- **`WriteDataArrayZarrV3`/`WriteDatasetZarrV3`** : xarray-go produit désormais
+  des stores **Zarr v3** (`zarr.json` par nœud, `node_type` group/array,
+  `data_type: float64`, `dimension_names`, encodage de clés `default` → `c/0/0`,
+  pipeline de codecs `bytes` + compression). Compressions : aucune, `gzip`
+  (via `ZarrZlib`), `zstd` (`ZarrZstd`).
+- Validé : aller-retour Go (les trois compressions) **et** relecture **exacte par
+  zarr-python 3.3.0** (`xr.open_zarr`) — valeurs, coordonnées et
+  `dimension_names`. Test `TestZarrWriteV3Roundtrip`.
+
 ### Ajouté (Sprint 68 — écriture zstd & lecture Zarr v3)
 
 - **Écriture Zarr compressée zstd** : nouvelle option `ZarrZstd` pour

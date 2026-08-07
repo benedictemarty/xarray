@@ -32,6 +32,44 @@ func TestZarrReadIntDtypes(t *testing.T) {
 	}
 }
 
+// TestZarrWriteV3Roundtrip écrit un Dataset au format Zarr v3 (zstd) et le relit.
+// Vérifie la structure v3 (zarr.json, node_type, dimension_names, chunk c/0/0).
+func TestZarrWriteV3Roundtrip(t *testing.T) {
+	da, _ := NewDataArray([]string{"y", "x"}, []int{3, 4},
+		[]float64{0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23},
+		map[string][]float64{"y": {45, 44, 43}, "x": {0, 1, 2, 3}}, "t2m")
+	ds, _ := NewDataset(map[string]*DataArray[float64]{"t2m": da})
+	dir := filepath.Join(t.TempDir(), "v3.zarr")
+	if err := WriteDatasetZarrV3(dir, ds, ZarrZstd); err != nil {
+		t.Fatalf("WriteDatasetZarrV3 : %v", err)
+	}
+	// Structure v3 attendue.
+	if _, err := os.Stat(filepath.Join(dir, "zarr.json")); err != nil {
+		t.Errorf("zarr.json racine absent : %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "t2m", "c", "0", "0")); err != nil {
+		t.Errorf("chunk t2m/c/0/0 absent : %v", err)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, "t2m", "zarr.json"))
+	for _, want := range []string{"\"zarr_format\": 3", "\"data_type\": \"float64\"", "dimension_names", "\"zstd\""} {
+		if !strings.Contains(string(raw), want) {
+			t.Errorf("t2m/zarr.json ne contient pas %q", want)
+		}
+	}
+	// Relecture.
+	got, err := ReadDatasetZarr(dir)
+	if err != nil {
+		t.Fatalf("relecture v3 : %v", err)
+	}
+	v, _ := got.Get("t2m")
+	if !reflect.DeepEqual(v.Data(), da.Data()) {
+		t.Errorf("roundtrip v3 = %v", v.Data())
+	}
+	if !reflect.DeepEqual(v.Dims(), []string{"y", "x"}) {
+		t.Errorf("dims v3 = %v", v.Dims())
+	}
+}
+
 // TestZarrReadV3 lit un groupe Zarr v3 (zarr.json, clés c/0/0, codec zstd par
 // défaut, coordonnées) produit par xarray. Vérifie le routage v2/v3.
 func TestZarrReadV3(t *testing.T) {
