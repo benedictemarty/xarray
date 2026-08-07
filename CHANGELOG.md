@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 35 — ArgMin/ArgMax, Quantile, Cumprod)
+
+- **`ArgMinAxis`/`ArgMaxAxis`** : indice (float64) de l'extremum le long d'une
+  dimension.
+- **`Quantile(q)`** et **`QuantileAxis(dim, q)`** : quantile q ∈ [0,1] par
+  interpolation linéaire (méthode « linear » de NumPy).
+- **`Cumprod(dim)`** : produit cumulé le long d'une dimension.
+
 ### Ajouté (Sprint 34 — Réductions statistiques et cumulatives)
 
 - **Statistiques** : `Var`/`Std`/`Median` (globales) et `VarAxis`/`StdAxis`/

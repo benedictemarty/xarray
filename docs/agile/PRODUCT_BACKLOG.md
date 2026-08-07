@@ -65,6 +65,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-33 | En tant qu'utilisateur, je veux une indexation par label avancée (nearest/plage/liste). | P1 | ✅ Fait (S32) |
 | US-34 | En tant qu'utilisateur, je veux `where` et l'interpolation des NaN (`interpolate_na`). | P1 | ✅ Fait (S33) |
 | US-35 | En tant qu'utilisateur, je veux des réductions statistiques (var/std/median) et cumulatives (cumsum/diff). | P1 | ✅ Fait (S34) |
+| US-36 | En tant qu'utilisateur, je veux argmin/argmax, quantile et cumprod. | P2 | ✅ Fait (S35) |
 
 ## Dette / transverse
 
