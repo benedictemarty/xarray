@@ -7,6 +7,21 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 75 — pyramides multi-échelles Zarr (overviews))
+
+- **`WritePyramidZarr`** : écrit une pyramide d'un raster 2D — le niveau 0
+  (pleine résolution) et des niveaux successivement réduits par **moyenne de
+  blocs `factor`×`factor`** (via `Coarsen`), stockés en groupes Zarr numérotés
+  « 0 »/« 1 »… avec une métadonnée **`multiscales`** à la racine. Utile pour la
+  visualisation zoomable et l'accès rapide à basse résolution.
+- **`ReadPyramidLevel`** et **`PyramidLevels`** : accès à un niveau et à la liste
+  des niveaux (chemin + facteur).
+- Convention minimale et auto-descriptive (esprit OME-Zarr / xarray-multiscale ;
+  pas de conformité NGFF complète revendiquée).
+- Validé : pyramide 8×8 → 4×4 → 2×2, moyenne de blocs exacte, métadonnée et
+  niveaux **relus par zarr-python** (`multiscales`, `open_zarr` par niveau).
+  Test `TestWritePyramidZarr`.
+
 ### Ajouté (Sprint 74 — démo runnable NDVI + docs/SATELLITE.md)
 
 - **`cmd/ndvi`** : démonstration exécutable (`go run ./cmd/ndvi`) de la chaîne
