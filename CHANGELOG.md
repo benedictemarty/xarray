@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 31 — Données manquantes)
+
+- **Gestion des NaN** sur `DataArray` : `CountNA`, `FillNA(value)`,
+  `DropNA(dim)` (supprime le long de dim les tranches contenant un NaN, how=any),
+  `FFill(dim)`/`BFill(dim)` (propagation avant/arrière). Sans effet pour les types
+  entiers.
+- Helper interne `forEachLine` (itération par ligne le long d'un axe).
+
 ### Ajouté (Sprint 30 — Gestion du temps + resample calendaire)
 
 - **Coordonnées temporelles** : `EpochSeconds`/`TimeFromEpoch`/`EpochCoord`
