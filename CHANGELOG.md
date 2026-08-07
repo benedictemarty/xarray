@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 36 — IdxMin/IdxMax)
+
+- **`IdxMinAxis`/`IdxMaxAxis`** : étiquette de coordonnée à l'extremum le long
+  d'une dimension (équivalent de `idxmin`/`idxmax` de xarray). Nécessite une
+  coordonnée.
+
 ### Ajouté (Sprint 35 — ArgMin/ArgMax, Quantile, Cumprod)
 
 - **`ArgMinAxis`/`ArgMaxAxis`** : indice (float64) de l'extremum le long d'une
