@@ -7,6 +7,14 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 45 — Propagation au Dataset)
+
+- **`Dataset.VarAxis`/`StdAxis`/`MedianAxis`** : réductions statistiques par axe
+  propagées aux variables portant la dimension (résultat `Dataset[float64]`).
+- **`Dataset.FillNA(value)`** : remplacement des NaN sur toutes les variables.
+- **`Dataset.Cumsum(dim)`** : somme cumulée propagée aux variables concernées
+  (les autres conservées).
+
 ### Ajouté (Sprint 44 — Groupby saisonnier)
 
 - **`CompSeason`** : composante saison météorologique (0=DJF, 1=MAM, 2=JJA,

@@ -73,6 +73,7 @@ Priorités : `P0` (indispensable), `P1` (important), `P2` (souhaitable).
 | US-41 | En tant qu'utilisateur, je veux des réductions par axe en lazy (streaming). | P1 | ✅ Fait (S40) |
 | US-42 | En tant qu'utilisateur, je veux des composantes temporelles et un groupby climatologique. | P1 | ✅ Fait (S43) |
 | US-43 | En tant qu'utilisateur, je veux un groupby saisonnier (DJF/MAM/JJA/SON). | P2 | ✅ Fait (S44) |
+| US-44 | En tant qu'utilisateur, je veux les stats/fillna/cumsum au niveau Dataset. | P1 | ✅ Fait (S45) |
 
 ## Dette / transverse
 
