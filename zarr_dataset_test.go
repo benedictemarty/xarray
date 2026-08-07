@@ -1,11 +1,50 @@
 package xarray
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 )
+
+// TestZarrDatasetConsolidatedMetadata vérifie l'écriture d'un .zmetadata
+// consolidé listant les métadonnées de chaque array (permet consolidated=True
+// côté zarr-python, sans RuntimeWarning).
+func TestZarrDatasetConsolidatedMetadata(t *testing.T) {
+	da, _ := NewDataArray([]string{"y", "x"}, []int{2, 2}, []float64{1, 2, 3, 4},
+		map[string][]float64{"y": {0, 1}, "x": {0, 1}}, "v")
+	ds, _ := NewDataset(map[string]*DataArray[float64]{"v": da})
+	dir := filepath.Join(t.TempDir(), "c.zarr")
+	if err := WriteDatasetZarr(dir, ds, ZarrNone); err != nil {
+		t.Fatalf("WriteDatasetZarr : %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, ".zmetadata"))
+	if err != nil {
+		t.Fatalf(".zmetadata absent : %v", err)
+	}
+	var m zconsolidated
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("json .zmetadata : %v", err)
+	}
+	if m.ZarrConsolidatedFormat != 1 {
+		t.Errorf("zarr_consolidated_format = %d, attendu 1", m.ZarrConsolidatedFormat)
+	}
+	// Clés attendues : .zgroup racine + .zarray/.zattrs de v, x, y.
+	for _, key := range []string{".zgroup", "v/.zarray", "v/.zattrs", "x/.zarray", "y/.zarray"} {
+		if _, ok := m.Metadata[key]; !ok {
+			t.Errorf("clé %q absente de .zmetadata (clés=%v)", key, keysOfRaw(m.Metadata))
+		}
+	}
+}
+
+func keysOfRaw(m map[string]json.RawMessage) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}
 
 func TestZarrDatasetAllerRetour(t *testing.T) {
 	temp, _ := NewDataArray([]string{"temps", "lieu"}, []int{2, 3},

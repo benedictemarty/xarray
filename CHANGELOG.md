@@ -7,6 +7,16 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 63 — métadonnées Zarr consolidées)
+
+- **`WriteDatasetZarr` écrit désormais un `.zmetadata` consolidé** (Zarr v2,
+  `zarr_consolidated_format: 1`) agrégeant tous les `.zgroup`/`.zarray`/`.zattrs`
+  du store. Permet à zarr-python/xarray d'ouvrir avec `consolidated=True` (une
+  seule lecture, sans parcourir l'arborescence) et supprime le `RuntimeWarning`
+  « consolidated metadata not found » observé auparavant.
+- Validé : `xr.open_zarr(dir, consolidated=True)` (zarr-python 3.3.0), warnings en
+  erreurs, valeurs exactes. Test `TestZarrDatasetConsolidatedMetadata`.
+
 ### Corrigé (Sprint 62 — Zarr `fill_value`, interop écriture zarr-python)
 
 - **`fill_value` du `.zarray` passé de `0` à `null`.** Un `fill_value` numérique

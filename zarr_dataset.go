@@ -1,6 +1,7 @@
 package xarray
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,7 +45,48 @@ func WriteDatasetZarr(dir string, ds *Dataset[float64], comp ZarrCompression) er
 			return err
 		}
 	}
-	return nil
+
+	// Métadonnées consolidées (.zmetadata) : permet à zarr-python/xarray d'ouvrir
+	// le store en une seule lecture, sans parcourir l'arborescence, et sans le
+	// RuntimeWarning « consolidated metadata not found ».
+	return consolidateZarrMetadata(dir)
+}
+
+// zconsolidated est le contenu de .zmetadata (Zarr v2, consolidated_format 1).
+type zconsolidated struct {
+	ZarrConsolidatedFormat int                        `json:"zarr_consolidated_format"`
+	Metadata               map[string]json.RawMessage `json:"metadata"`
+}
+
+// consolidateZarrMetadata agrège tous les .zgroup/.zarray/.zattrs du store en un
+// unique .zmetadata à la racine (clés = chemins relatifs en « / »).
+func consolidateZarrMetadata(dir string) error {
+	meta := map[string]json.RawMessage{}
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		switch info.Name() {
+		case ".zgroup", ".zarray", ".zattrs":
+			rel, err := filepath.Rel(dir, path)
+			if err != nil {
+				return err
+			}
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			meta[filepath.ToSlash(rel)] = json.RawMessage(raw)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return writeJSONFile(filepath.Join(dir, ".zmetadata"), zconsolidated{ZarrConsolidatedFormat: 1, Metadata: meta})
 }
 
 // ReadDatasetZarr lit un Dataset[float64] depuis un groupe Zarr v2 (dir). Les
