@@ -7,6 +7,22 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 61 — ouverture NetCDF-4/HDF5 & CDF-2/5 par conversion)
+
+- **`OpenNetCDFFile(path, conv)`** : ouvre un fichier netCDF quel que soit son
+  format. CDF-1 lu directement ; **NetCDF-4/HDF5, CDF-2/5** délégués à un
+  **convertisseur externe** (`nccopy -k classic` ou `cdo -f nc copy`) qui les
+  réécrit en CDF-1, puis lecture normale. Pas de cgo, pas de lecteur HDF5 en Go :
+  un pont pragmatique, dans l'esprit du backend eccodes optionnel pour le GRIB.
+- **`SniffNetCDFFormat`** (détection par octets de signature : CDF-1/2/5, HDF5) et
+  **`FindNetCDFConverter`** (détection `nccopy`/`cdo` dans le PATH).
+- Robustesse : sans convertisseur disponible, un HDF5/CDF-2 échoue par une
+  **erreur explicite** (jamais de panic ni de lecture erronée).
+- Validé de bout en bout sur un vrai fichier NetCDF-4/HDF5 (superblock v2) :
+  conversion → lecture → valeurs correctes. En l'absence de `nccopy`/`cdo` dans
+  l'environnement de test, la validation utilise xarray Python comme
+  convertisseur stand-in ; le défaut de production reste `nccopy`/`cdo`.
+
 ### Ajouté (Sprint 60 — attributs netCDF & décodage CF minimal)
 
 - **Lecture/écriture des attributs netCDF** (globaux et de variable) dans le
