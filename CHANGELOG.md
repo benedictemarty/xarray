@@ -20,11 +20,15 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 - **`DecodeTime(*Dataset[float64], dim)`** et **`DecodeCFTime([]float64, units)`**
   — décodage de l'axe temporel CF « `<unité> since <date>` » (seconds/minutes/
   hours/days) vers des secondes depuis l'epoch Unix.
-- **Durcissement du lecteur** : les cas hors périmètre sont refusés par une
-  erreur explicite (dimension d'enregistrement illimitée, `numrecs` ≠ 0)
-  plutôt que par un panic.
+- **Dimension d'enregistrement illimitée** (`numrecs` > 0) : désormais **lue**
+  (variables d'enregistrement entrelacées, désentrelacées à la lecture), au lieu
+  d'être refusée. C'est le cas le plus fréquent des fichiers climato réels
+  (axe `time` illimité). L'écriture reste en dimensions fixes.
 - Motivation : rendre `gocoverage` capable de charger des netCDF portant des
-  métadonnées CF réelles (unités pour `get_fields`, valeurs dépackées, temps).
+  métadonnées CF réelles (unités pour `get_fields`, valeurs dépackées, temps)
+  et un axe temporel illimité.
+- Validé empiriquement sur des fichiers écrits par Python xarray
+  (`NETCDF3_CLASSIC`, packing int16, `time` illimité).
 
 ### Ajouté (Sprint 59 — sélection *nearest* conservant la dimension)
 

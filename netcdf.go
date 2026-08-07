@@ -14,17 +14,19 @@ import (
 // Support d'un sous-ensemble du format netCDF « classique » (CDF-1).
 //
 // Périmètre assumé :
-//   - dimensions de taille fixe (dimension d'enregistrement illimitée refusée) ;
+//   - dimensions de taille fixe ET une dimension d'enregistrement illimitée
+//     (variables d'enregistrement entrelacées, lues au désentrelacement) ;
 //   - variables numériques de type NC_BYTE/NC_SHORT/NC_INT/NC_FLOAT/NC_DOUBLE ;
 //   - coordonnées de dimension (variables 1D nommées comme leur dimension) ;
 //   - attributs globaux et de variable (NC_CHAR + types numériques), lus et
 //     écrits ; les attributs de variable alimentent Variable.attrs (units,
 //     long_name, scale_factor…) et permettent le décodage CF (voir cf.go).
 //
+// L'ÉCRITURE produit toujours des dimensions fixes (pas de dimension illimitée).
 // Ce n'est PAS une implémentation complète de netCDF (ni NetCDF-4/HDF5, ni
-// CDF-2/5). Les cas hors périmètre sont désormais refusés par une erreur
-// explicite (signature/version, dimension illimitée, numrecs≠0) plutôt que par
-// un panic. Le décodage CF (packing, temps) est fourni séparément dans cf.go.
+// CDF-2/5). Les cas hors périmètre sont refusés par une erreur explicite
+// (signature/version) plutôt que par un panic. Le décodage CF (packing, temps)
+// est fourni séparément dans cf.go.
 
 const (
 	ncByte   int32 = 1
@@ -296,13 +298,15 @@ func (r *ncReader) str() (string, error) {
 }
 
 type ncVarRead struct {
-	name    string
-	dimIDs  []int32
-	ncType  int32
-	begin   int32
-	nelems  int
-	dimSize []int
-	attrs   map[string]string
+	name     string
+	dimIDs   []int32
+	ncType   int32
+	begin    int32
+	nelems   int
+	dimSize  []int
+	attrs    map[string]string
+	isRecord bool // variable d'enregistrement (1re dim = dimension illimitée)
+	perRec   int  // nombre d'éléments par enregistrement
 }
 
 // attrs lit une att_list (globale ou de variable) et renvoie les attributs sous
@@ -402,13 +406,12 @@ func ReadDatasetNetCDF[T Number](rd io.Reader) (*Dataset[T], error) {
 	if err != nil {
 		return nil, err
 	}
-	if numrecs != 0 {
-		return nil, fmt.Errorf("xarray: dimension d'enregistrement illimitée non prise en charge (numrecs=%d)", numrecs)
-	}
 
-	// dim_list
+	// dim_list. La dimension d'enregistrement (illimitée) a une longueur 0 dans
+	// l'en-tête ; sa longueur effective est numrecs.
 	dimNames := []string{}
 	dimLens := []int{}
+	recDim := -1 // index de la dimension illimitée, -1 si aucune
 	tag, err := r.i32()
 	if err != nil {
 		return nil, err
@@ -427,8 +430,17 @@ func ReadDatasetNetCDF[T Number](rd io.Reader) (*Dataset[T], error) {
 			if err != nil {
 				return nil, err
 			}
-			if ln <= 0 {
-				return nil, fmt.Errorf("xarray: dimension %q illimitée ou vide (longueur %d) non prise en charge", name, ln)
+			if ln < 0 {
+				return nil, fmt.Errorf("xarray: dimension %q de longueur invalide (%d)", name, ln)
+			}
+			if ln == 0 {
+				if recDim >= 0 {
+					return nil, fmt.Errorf("xarray: plusieurs dimensions illimitées non prises en charge")
+				}
+				recDim = int(i)
+				dimNames = append(dimNames, name)
+				dimLens = append(dimLens, int(numrecs))
+				continue
 			}
 			dimNames = append(dimNames, name)
 			dimLens = append(dimLens, int(ln))
@@ -487,8 +499,37 @@ func ReadDatasetNetCDF[T Number](rd io.Reader) (*Dataset[T], error) {
 			if err != nil {
 				return nil, err
 			}
-			vars = append(vars, ncVarRead{name: name, dimIDs: ids, ncType: ncType, begin: begin, nelems: nelems, dimSize: sizes, attrs: vatts})
+			isRecord := nd > 0 && recDim >= 0 && ids[0] == int32(recDim)
+			perRec := nelems
+			if isRecord {
+				perRec = 1
+				for k := 1; k < len(sizes); k++ {
+					perRec *= sizes[k]
+				}
+			}
+			vars = append(vars, ncVarRead{name: name, dimIDs: ids, ncType: ncType, begin: begin, nelems: nelems, dimSize: sizes, attrs: vatts, isRecord: isRecord, perRec: perRec})
 		}
+	}
+
+	// Taille d'un enregistrement (recsize) = somme des tailles par enregistrement
+	// de toutes les variables d'enregistrement. Règle netCDF : padding à 4 octets
+	// sauf s'il n'existe qu'une seule variable d'enregistrement.
+	recCount := 0
+	for _, v := range vars {
+		if v.isRecord {
+			recCount++
+		}
+	}
+	recsize := 0
+	for _, v := range vars {
+		if !v.isRecord {
+			continue
+		}
+		rb := v.perRec * ncElemSize(v.ncType)
+		if recCount > 1 {
+			rb += pad4(rb)
+		}
+		recsize += rb
 	}
 
 	// Lecture des données de chaque variable.
@@ -502,7 +543,13 @@ func ReadDatasetNetCDF[T Number](rd io.Reader) (*Dataset[T], error) {
 	dataVars := map[string]*DataArray[T]{}
 
 	for _, v := range vars {
-		values, err := readNCValues[T](raw, int(v.begin), v.nelems, v.ncType)
+		var values []T
+		var err error
+		if v.isRecord {
+			values, err = readNCRecordValues[T](raw, int(v.begin), int(numrecs), v.perRec, recsize, v.ncType)
+		} else {
+			values, err = readNCValues[T](raw, int(v.begin), v.nelems, v.ncType)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -579,6 +626,22 @@ func readNCValues[T Number](raw []byte, begin, nelems int, ncType int32) ([]T, e
 			out[i] = T(int8(raw[p]))
 		}
 		p += size
+	}
+	return out, nil
+}
+
+// readNCRecordValues lit une variable d'enregistrement dont les données sont
+// entrelacées par enregistrement : le r-ième enregistrement (perRec éléments)
+// se trouve à l'offset begin + r*recsize. Renvoie numrecs*perRec valeurs en
+// ordre C (dimension d'enregistrement en tête).
+func readNCRecordValues[T Number](raw []byte, begin, numrecs, perRec, recsize int, ncType int32) ([]T, error) {
+	out := make([]T, 0, numrecs*perRec)
+	for r := 0; r < numrecs; r++ {
+		chunk, err := readNCValues[T](raw, begin+r*recsize, perRec, ncType)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, chunk...)
 	}
 	return out, nil
 }

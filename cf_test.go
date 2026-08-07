@@ -2,6 +2,7 @@ package xarray
 
 import (
 	"bytes"
+	"encoding/binary"
 	"math"
 	"testing"
 	"time"
@@ -134,10 +135,95 @@ func TestDecodeTimeDataset(t *testing.T) {
 	}
 }
 
-func TestRejectUnlimitedDim(t *testing.T) {
-	// En-tête CDF-1 avec numrecs=1 -> doit être refusé, pas paniquer.
+// TestReadUnlimitedDim construit un CDF-1 avec une dimension d'enregistrement
+// illimitée (time) et deux variables d'enregistrement entrelacées (la coordonnée
+// time et une variable v[time,x]), puis vérifie la lecture désentrelacée.
+func TestReadUnlimitedDim(t *testing.T) {
+	h := new(bytes.Buffer)
+	h.Write([]byte{'C', 'D', 'F', 1})
+	binary.Write(h, ncEndian, int32(2)) // numrecs = 2
+
+	// dim_list : time (illimitée, len 0), x (len 2)
+	binary.Write(h, ncEndian, tagDimension)
+	binary.Write(h, ncEndian, int32(2))
+	writeNCString(h, "time")
+	binary.Write(h, ncEndian, int32(0))
+	writeNCString(h, "x")
+	binary.Write(h, ncEndian, int32(2))
+
+	// gatt : ABSENT
+	binary.Write(h, ncEndian, int32(0))
+	binary.Write(h, ncEndian, int32(0))
+
+	// var_list : time[time], v[time,x]
+	binary.Write(h, ncEndian, tagVariable)
+	binary.Write(h, ncEndian, int32(2))
+	// var time
+	writeNCString(h, "time")
+	binary.Write(h, ncEndian, int32(1)) // nd
+	binary.Write(h, ncEndian, int32(0)) // dimid time
+	binary.Write(h, ncEndian, int32(0)) // vatt ABSENT
+	binary.Write(h, ncEndian, int32(0))
+	binary.Write(h, ncEndian, ncInt)
+	binary.Write(h, ncEndian, int32(4)) // vsize (par enregistrement)
+	beginTimePos := h.Len()
+	binary.Write(h, ncEndian, int32(0)) // begin (placeholder)
+	// var v
+	writeNCString(h, "v")
+	binary.Write(h, ncEndian, int32(2)) // nd
+	binary.Write(h, ncEndian, int32(0)) // dimid time
+	binary.Write(h, ncEndian, int32(1)) // dimid x
+	binary.Write(h, ncEndian, int32(0)) // vatt ABSENT
+	binary.Write(h, ncEndian, int32(0))
+	binary.Write(h, ncEndian, ncInt)
+	binary.Write(h, ncEndian, int32(8)) // vsize (par enregistrement)
+	beginVPos := h.Len()
+	binary.Write(h, ncEndian, int32(0)) // begin (placeholder)
+
+	H := h.Len()
+	hb := h.Bytes()
+	// Layout entrelacé : par enregistrement [time(4), v(8)] → recsize = 12.
+	ncEndian.PutUint32(hb[beginTimePos:], uint32(H))
+	ncEndian.PutUint32(hb[beginVPos:], uint32(H+4))
+
+	d := new(bytes.Buffer)
+	binary.Write(d, ncEndian, int32(100)) // time[0]
+	binary.Write(d, ncEndian, int32(1))   // v[0,0]
+	binary.Write(d, ncEndian, int32(2))   // v[0,1]
+	binary.Write(d, ncEndian, int32(200)) // time[1]
+	binary.Write(d, ncEndian, int32(3))   // v[1,0]
+	binary.Write(d, ncEndian, int32(4))   // v[1,1]
+
+	full := append(hb, d.Bytes()...)
+	ds, err := ReadDatasetNetCDF[float64](bytes.NewReader(full))
+	if err != nil {
+		t.Fatalf("lecture dim illimitée: %v", err)
+	}
+	tc, _ := ds.Coord("time")
+	if len(tc) != 2 || tc[0] != 100 || tc[1] != 200 {
+		t.Errorf("coord time = %v, attendu [100 200]", tc)
+	}
+	v, err := ds.Get("v")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := v.Shape(); len(s) != 2 || s[0] != 2 || s[1] != 2 {
+		t.Errorf("shape v = %v, attendu [2 2]", v.Shape())
+	}
+	got := v.Data()
+	want := []float64{1, 2, 3, 4}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("v = %v, attendu %v", got, want)
+			break
+		}
+	}
+}
+
+func TestReadTruncatedHeader(t *testing.T) {
+	// En-tête tronqué après numrecs -> erreur propre, pas de panic.
 	buf := []byte{'C', 'D', 'F', 1, 0, 0, 0, 1}
 	if _, err := ReadDatasetNetCDF[float64](bytes.NewReader(buf)); err == nil {
-		t.Error("attendu une erreur pour numrecs != 0")
+		t.Error("attendu une erreur pour en-tête tronqué")
 	}
 }
