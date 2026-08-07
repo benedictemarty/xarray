@@ -7,6 +7,12 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 48 — Restructuration de dimensions)
+
+- **`Squeeze(dim)`** : supprime une dimension de taille 1 (et sa coordonnée).
+- **`ExpandDims(dim)`** : insère une nouvelle dimension de taille 1 en tête.
+- **`RenameDim(old, new)`** : renomme une dimension et sa coordonnée.
+
 ### Ajouté (Sprint 47 — Resample/temporel au Dataset)
 
 - **`Dataset.Resample(dim, freq)`**, **`Dataset.ResampleCalendar(dim, period)`**,
