@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 81 — reprojection : interpolation bilinéaire)
+
+- **`Reproject(..., method Resampling)`** avec **`Nearest`** ou **`Bilinear`** :
+  la reprojection raster propose désormais l'**interpolation bilinéaire** (mieux
+  adaptée aux données continues : réflectance, température) en plus du plus proche
+  voisin. `ReprojectNearest` conservé (= `Nearest`) ; `ReprojectDataArray` prend
+  un paramètre `method`.
+- Bord/hors-grille → `NaN` (les 4 voisins doivent exister). Exact sur un champ
+  linéaire.
+- Validé : bilinéaire **identique** à une référence numpy (écart 0) ; noyaux
+  d'échantillonnage testés (`TestSampling`).
+
 ### Ajouté (Sprint 80 — CRS : Lambert-93 (EPSG:2154))
 
 - **Lambert Conformal Conic** (2 parallèles, formules de Snyder) ajoutée au
