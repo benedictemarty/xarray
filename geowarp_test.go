@@ -119,6 +119,55 @@ func TestSampling(t *testing.T) {
 	}
 }
 
+// TestReprojectFromGeos vérifie la reprojection d'une grille géostationnaire
+// (MTG) vers une grille lon/lat couvrant l'Europe : la plupart des pixels sont
+// valides, les bords (hors source/limbe) valent NaN.
+func TestReprojectFromGeos(t *testing.T) {
+	g := MTGGeos()
+	dstT := Affine{A: 0.5, C: -10, E: -0.5, F: 60} // lon -10..10, lat 60..40
+	dw, dh := 40, 40
+	// Emprise géostationnaire des coins de la cible → dimensionne la source.
+	minx, miny, maxx, maxy := math.Inf(1), math.Inf(1), math.Inf(-1), math.Inf(-1)
+	for _, ll := range [][2]float64{{-10, 60}, {10, 60}, {-10, 40}, {10, 40}} {
+		gx, gy, ok := g.Forward(ll[0], ll[1])
+		if !ok {
+			t.Fatal("coin invisible")
+		}
+		minx, maxx = math.Min(minx, gx), math.Max(maxx, gx)
+		miny, maxy = math.Min(miny, gy), math.Max(maxy, gy)
+	}
+	sw, sh := 60, 60
+	resx, resy := (maxx-minx)/float64(sw), (maxy-miny)/float64(sh)
+	srcT := Affine{A: resx, C: minx, E: -resy, F: maxy}
+	src := make([]float64, sw*sh)
+	for r := 0; r < sh; r++ {
+		for c := 0; c < sw; c++ {
+			src[r*sw+c] = float64(r + c)
+		}
+	}
+	out, err := ReprojectFromGeos(src, sw, sh, srcT, g, dstT, dw, dh, Nearest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	valid := 0
+	for _, v := range out {
+		if !math.IsNaN(v) {
+			valid++
+		}
+	}
+	if valid < dw*dh/2 {
+		t.Errorf("seulement %d pixels valides sur %d", valid, dw*dh)
+	}
+	// Spot check nearest : lon=2,lat=48 -> geos -> pixel source.
+	gx, gy, _ := g.Forward(2, 48)
+	sc := int(math.Floor((gx - minx) / resx))
+	sr := int(math.Floor((maxy - gy) / resy))
+	ci, cj := int((2-(-10))/0.5), int((60-48)/0.5)
+	if out[cj*dw+ci] != float64(sr+sc) {
+		t.Errorf("pixel(2,48) = %v, attendu %v", out[cj*dw+ci], float64(sr+sc))
+	}
+}
+
 func TestReprojectUnsupportedCRS(t *testing.T) {
 	src := []float64{1, 2, 3, 4}
 	tr := Affine{A: 1, E: -1, F: 2}

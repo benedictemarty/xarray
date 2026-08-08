@@ -96,9 +96,27 @@ func ReprojectNearest(src []float64, srcW, srcH int, srcT Affine, srcCRS string,
 }
 
 // Reproject reprojette une grille source vers une grille cible selon la méthode
-// de rééchantillonnage choisie (Nearest ou Bilinear).
+// de rééchantillonnage choisie. La transformation de coordonnées s'appuie sur
+// TransformXY (CRS EPSG gérés). Pour une projection non-EPSG (géostationnaire),
+// voir ReprojectFromGeos / reprojectWith.
 func Reproject(src []float64, srcW, srcH int, srcT Affine, srcCRS string,
 	dstT Affine, dstW, dstH int, dstCRS string, method Resampling) ([]float64, error) {
+	// Vérifie tôt que la paire de CRS est gérée (évite N² erreurs).
+	if _, _, err := TransformXY(dstCRS, srcCRS, dstT.C, dstT.F); err != nil {
+		return nil, err
+	}
+	return reprojectWith(src, srcW, srcH, srcT, dstT, dstW, dstH, method,
+		func(tx, ty float64) (float64, float64, bool) {
+			sx, sy, err := TransformXY(dstCRS, srcCRS, tx, ty)
+			return sx, sy, err == nil
+		})
+}
+
+// reprojectWith est le cœur du rééchantillonnage : toSrc convertit les
+// coordonnées monde cibles en coordonnées monde sources (ok=false si le point
+// n'a pas d'antécédent, ex. hors limbe géostationnaire → NaN).
+func reprojectWith(src []float64, srcW, srcH int, srcT Affine, dstT Affine, dstW, dstH int,
+	method Resampling, toSrc func(tx, ty float64) (float64, float64, bool)) ([]float64, error) {
 	if len(src) != srcW*srcH {
 		return nil, fmt.Errorf("xarray: taille source %d ≠ %d×%d", len(src), srcW, srcH)
 	}
@@ -109,19 +127,16 @@ func Reproject(src []float64, srcW, srcH int, srcT Affine, srcCRS string,
 	if err != nil {
 		return nil, err
 	}
-	// Vérifie tôt que la paire de CRS est gérée (évite N² erreurs).
-	if _, _, err := TransformXY(dstCRS, srcCRS, dstT.C, dstT.F); err != nil {
-		return nil, err
-	}
 	out := make([]float64, dstW*dstH)
 	for j := 0; j < dstH; j++ {
 		for i := 0; i < dstW; i++ {
-			tx, ty := dstT.Apply(float64(i)+0.5, float64(j)+0.5) // centre du pixel cible (monde cible)
-			sx, sy, err := TransformXY(dstCRS, srcCRS, tx, ty)   // vers le CRS source
-			if err != nil {
-				return nil, err
+			tx, ty := dstT.Apply(float64(i)+0.5, float64(j)+0.5)
+			sx, sy, ok := toSrc(tx, ty)
+			if !ok {
+				out[j*dstW+i] = math.NaN()
+				continue
 			}
-			col, row := srcInv.Apply(sx, sy) // pixel source (fractionnaire)
+			col, row := srcInv.Apply(sx, sy)
 			switch method {
 			case Bilinear:
 				out[j*dstW+i] = sampleBilinear(src, srcW, srcH, col, row)
@@ -133,6 +148,17 @@ func Reproject(src []float64, srcW, srcH int, srcT Affine, srcCRS string,
 		}
 	}
 	return out, nil
+}
+
+// ReprojectFromGeos reprojette une grille en projection géostationnaire (affine
+// srcT donnant les coordonnées du plan satellite en mètres) vers une grille
+// lon/lat (dstT en degrés, EPSG:4326). Cas des scènes MTG/Meteosat FCI.
+func ReprojectFromGeos(src []float64, srcW, srcH int, srcT Affine, geos Geostationary,
+	dstT Affine, dstW, dstH int, method Resampling) ([]float64, error) {
+	return reprojectWith(src, srcW, srcH, srcT, dstT, dstW, dstH, method,
+		func(lon, lat float64) (float64, float64, bool) {
+			return geos.Forward(lon, lat) // lon/lat cible -> plan géostationnaire source
+		})
 }
 
 // ReprojectDataArray reprojette un DataArray 2D géoréférencé (dimensions
