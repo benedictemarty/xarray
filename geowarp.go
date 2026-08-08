@@ -5,13 +5,14 @@ import (
 	"math"
 )
 
-// Rééchantillonnage/reprojection de raster par plus proche voisin. Pour chaque
-// pixel de la grille cible : coordonnées monde (affine cible) → transformation
-// vers le CRS source (TransformXY) → pixel source (affine source inverse) →
-// échantillon du plus proche voisin. Les pixels hors emprise source valent NaN.
+// Rééchantillonnage/reprojection de raster. Pour chaque pixel de la grille
+// cible : coordonnées monde (affine cible) → transformation vers le CRS source
+// (TransformXY) → pixel source (affine source inverse) → échantillon selon la
+// méthode (plus proche voisin, bilinéaire ou convolution cubique). Les pixels
+// hors emprise source valent NaN.
 //
-// La transformation de coordonnées est limitée aux paires gérées par TransformXY
-// (4326 ↔ 3857 et l'identité) ; les autres CRS nécessitent PROJ.
+// Les CRS gérés sont ceux de TransformXY (4326, 3857, UTM, Lambert-93, +
+// identité) ; les autres nécessitent PROJ.
 
 // Resampling désigne la méthode d'interpolation au rééchantillonnage.
 type Resampling int
@@ -19,7 +20,45 @@ type Resampling int
 const (
 	Nearest  Resampling = iota // plus proche voisin
 	Bilinear                   // interpolation bilinéaire (données continues)
+	Cubic                      // convolution cubique (noyau de Keys, a=-0.5)
 )
+
+// keysCubic est le noyau de convolution cubique de Keys (a = -0.5), équivalent
+// au rééchantillonnage « cubic » de GDAL/rasterio.
+func keysCubic(t float64) float64 {
+	const a = -0.5
+	t = math.Abs(t)
+	switch {
+	case t <= 1:
+		return (a+2)*t*t*t - (a+3)*t*t + 1
+	case t < 2:
+		return a*t*t*t - 5*a*t*t + 8*a*t - 4*a
+	default:
+		return 0
+	}
+}
+
+// sampleCubic interpole par convolution cubique (voisinage 4×4). Renvoie NaN si
+// un des 16 voisins est hors grille ou vaut NaN.
+func sampleCubic(src []float64, w, h int, col, row float64) float64 {
+	fc, fr := col-0.5, row-0.5
+	i0, j0 := int(math.Floor(fc)), int(math.Floor(fr))
+	if i0-1 < 0 || i0+2 >= w || j0-1 < 0 || j0+2 >= h {
+		return math.NaN()
+	}
+	var sum float64
+	for n := -1; n <= 2; n++ {
+		wy := keysCubic(fr - float64(j0+n))
+		for m := -1; m <= 2; m++ {
+			v := src[(j0+n)*w+(i0+m)]
+			if math.IsNaN(v) {
+				return math.NaN()
+			}
+			sum += v * wy * keysCubic(fc-float64(i0+m))
+		}
+	}
+	return sum
+}
 
 // sampleNearest échantillonne src au plus proche voisin d'un pixel fractionnaire
 // (col, row) exprimé en indices de pixels (le centre du pixel i est à i+0.5).
@@ -83,9 +122,12 @@ func Reproject(src []float64, srcW, srcH int, srcT Affine, srcCRS string,
 				return nil, err
 			}
 			col, row := srcInv.Apply(sx, sy) // pixel source (fractionnaire)
-			if method == Bilinear {
+			switch method {
+			case Bilinear:
 				out[j*dstW+i] = sampleBilinear(src, srcW, srcH, col, row)
-			} else {
+			case Cubic:
+				out[j*dstW+i] = sampleCubic(src, srcW, srcH, col, row)
+			default:
 				out[j*dstW+i] = sampleNearest(src, srcW, srcH, col, row)
 			}
 		}

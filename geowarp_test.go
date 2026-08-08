@@ -104,6 +104,19 @@ func TestSampling(t *testing.T) {
 	if !math.IsNaN(sampleNearest(src, w, h, -1, 0)) {
 		t.Error("hors bornes attendu NaN (nearest)")
 	}
+	// Cubique (Keys a=-0.5) : exact sur le champ linéaire src[r][c]=10r+c.
+	// Point intérieur (assez loin du bord pour avoir le voisinage 4×4).
+	if v := sampleCubic(src, w, h, 3.2, 2.4); math.Abs(v-(10*(2.4-0.5)+(3.2-0.5))) > 1e-9 {
+		t.Errorf("cubique linéaire = %v, attendu %v", v, 10*(2.4-0.5)+(3.2-0.5))
+	}
+	// Cubique au centre exact d'un pixel intérieur -> valeur du pixel.
+	if v := sampleCubic(src, w, h, 2.5, 2.5); math.Abs(v-22) > 1e-9 {
+		t.Errorf("cubique centre = %v, attendu 22", v)
+	}
+	// Cubique près du bord (voisinage 4×4 incomplet) -> NaN.
+	if !math.IsNaN(sampleCubic(src, w, h, 1.0, 1.0)) {
+		t.Error("bord attendu NaN (cubique)")
+	}
 }
 
 func TestReprojectUnsupportedCRS(t *testing.T) {

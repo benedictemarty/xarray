@@ -7,6 +7,15 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 82 — reprojection : interpolation bicubique)
+
+- **`Cubic`** ajouté aux méthodes de rééchantillonnage : convolution cubique
+  (noyau de **Keys, a = -0.5**), équivalent au « cubic » de GDAL/rasterio, en
+  plus de `Nearest`/`Bilinear`. Voisinage 4×4 ; bord/hors-grille → `NaN` ; exact
+  sur un champ linéaire.
+- Validé : **identique** à une référence numpy du même noyau (écart 0). Tests
+  `TestSampling` étendus (cubique linéaire, centre, bord → NaN).
+
 ### Ajouté (Sprint 81 — reprojection : interpolation bilinéaire)
 
 - **`Reproject(..., method Resampling)`** avec **`Nearest`** ou **`Bilinear`** :
