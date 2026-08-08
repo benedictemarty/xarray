@@ -56,6 +56,68 @@ func ResampleSwathNearest(data, lon, lat []float64, dstT Affine, dstW, dstH int)
 	return grid, counts, nil
 }
 
+// ResampleSwathNearestRadius rééchantillonne une fauchée par plus proche voisin
+// avec un rayon de recherche : pour chaque cellule cible, on retient la valeur du
+// pixel source le plus proche (distance en lon/lat) trouvé dans une fenêtre de
+// ±radiusCells cellules ; aucune → NaN. Contrairement au binning simple, cela
+// COMBLE les cellules vides quand la grille cible est plus fine que la fauchée
+// (équivalent au radius_of_influence de pyresample, exprimé ici en cellules).
+func ResampleSwathNearestRadius(data, lon, lat []float64, dstT Affine, dstW, dstH, radiusCells int) ([]float64, error) {
+	if len(data) != len(lon) || len(lon) != len(lat) {
+		return nil, fmt.Errorf("xarray: data/lon/lat de longueurs différentes")
+	}
+	if dstW <= 0 || dstH <= 0 || radiusCells < 0 {
+		return nil, fmt.Errorf("xarray: paramètres cibles invalides")
+	}
+	inv, err := dstT.Inverse()
+	if err != nil {
+		return nil, err
+	}
+	// Répartit les pixels sources dans les cellules (index par cellule).
+	buckets := make([][]int, dstW*dstH)
+	for k := range data {
+		if math.IsNaN(data[k]) {
+			continue
+		}
+		col, row := inv.Apply(lon[k], lat[k])
+		i, j := int(math.Floor(col)), int(math.Floor(row))
+		if i >= 0 && i < dstW && j >= 0 && j < dstH {
+			buckets[j*dstW+i] = append(buckets[j*dstW+i], k)
+		}
+	}
+	out := make([]float64, dstW*dstH)
+	for j := 0; j < dstH; j++ {
+		for i := 0; i < dstW; i++ {
+			cx, cy := dstT.Apply(float64(i)+0.5, float64(j)+0.5) // centre de la cellule (monde)
+			best, bestD := -1, math.Inf(1)
+			for dj := -radiusCells; dj <= radiusCells; dj++ {
+				jj := j + dj
+				if jj < 0 || jj >= dstH {
+					continue
+				}
+				for di := -radiusCells; di <= radiusCells; di++ {
+					ii := i + di
+					if ii < 0 || ii >= dstW {
+						continue
+					}
+					for _, k := range buckets[jj*dstW+ii] {
+						d := math.Hypot(lon[k]-cx, lat[k]-cy)
+						if d < bestD {
+							bestD, best = d, k
+						}
+					}
+				}
+			}
+			if best >= 0 {
+				out[j*dstW+i] = data[best]
+			} else {
+				out[j*dstW+i] = math.NaN()
+			}
+		}
+	}
+	return out, nil
+}
+
 // SwathToDataArray rééchantillonne une fauchée en un DataArray[float64]
 // géoréférencé sur la grille cible (dimensions [yDim, xDim]), directement
 // subsettable (SubsetBBox, Query…). name est le nom de la variable produite.

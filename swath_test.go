@@ -36,6 +36,43 @@ func TestResampleSwathNearest(t *testing.T) {
 	}
 }
 
+// TestResampleSwathNearestRadius : le rayon de recherche comble les cellules
+// vides d'une grille plus fine que la fauchée.
+func TestResampleSwathNearestRadius(t *testing.T) {
+	n := 120
+	data := make([]float64, n)
+	lon := make([]float64, n)
+	lat := make([]float64, n)
+	for k := 0; k < n; k++ {
+		f := float64(k) / float64(n-1)
+		lon[k], lat[k], data[k] = f*10, 40+f*10, 100
+	}
+	dstT := Affine{A: 0.25, C: 0, E: -0.25, F: 50} // grille fine 40×40
+	g0, err := ResampleSwathNearestRadius(data, lon, lat, dstT, 40, 40, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g2, _ := ResampleSwathNearestRadius(data, lon, lat, dstT, 40, 40, 2)
+	filled := func(g []float64) int {
+		n := 0
+		for _, v := range g {
+			if !math.IsNaN(v) {
+				n++
+			}
+		}
+		return n
+	}
+	if filled(g2) <= filled(g0) {
+		t.Errorf("le rayon devrait combler des trous : r0=%d, r2=%d", filled(g0), filled(g2))
+	}
+	// La valeur reste celle du plus proche pixel (ici 100 partout où rempli).
+	for _, v := range g2 {
+		if !math.IsNaN(v) && v != 100 {
+			t.Errorf("valeur = %v, attendu 100", v)
+		}
+	}
+}
+
 // TestSwathToDataArray : une fauchée rééchantillonnée devient un DataArray
 // géoréférencé (coordonnées lon/lat régulières, CRS EPSG:4326).
 func TestSwathToDataArray(t *testing.T) {

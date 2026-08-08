@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 85 — fauchée : rééchantillonnage avec rayon d'influence)
+
+- **`ResampleSwathNearestRadius`** : plus proche voisin avec **rayon de
+  recherche** (`radiusCells`). Pour chaque cellule cible, retient le pixel source
+  le plus proche dans une fenêtre de ±rayon cellules. **Comble les cellules
+  vides** quand la grille cible est plus fine que la fauchée (l'équivalent du
+  `radius_of_influence` de pyresample), là où le binning simple laissait des
+  trous.
+- Validé : grille fine 40×40, rayon 0 → 40 cellules, rayon 2 → 340 cellules
+  (trous comblés), valeurs conservées. Test `TestResampleSwathNearestRadius`.
+
 ### Ajouté (Sprint 84 — rééchantillonnage de fauchée (satellites défilants))
 
 - **`ResampleSwathNearest`** / **`SwathToDataArray`** : rééchantillonnent des
