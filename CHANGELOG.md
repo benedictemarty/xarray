@@ -7,6 +7,17 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 86 — interpolation bilinéaire au point)
+
+- **`InterpBilinear(da, xDim, yDim, x, y)`** : échantillonne un DataArray à une
+  position monde exacte par **interpolation bilinéaire** sur les axes x/y (les 4
+  pixels encadrants pondérés), en conservant les dimensions restantes
+  (temps/niveau). Erreur si le point est hors grille. Axes croissants **ou**
+  décroissants (cas latitude) gérés (`bracketF`).
+- Complète `SelNearest` (plus proche voisin) pour l'extraction ponctuelle — utile
+  aux requêtes EDR (`position`, `trajectory`, `locations`) qui veulent la valeur
+  au point plutôt qu'au centre de cellule. Tests `TestInterpBilinear*`.
+
 ### Ajouté (Sprint 85 — fauchée : rééchantillonnage avec rayon d'influence)
 
 - **`ResampleSwathNearestRadius`** : plus proche voisin avec **rayon de
