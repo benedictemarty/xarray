@@ -7,6 +7,18 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 83 — reprojection depuis la projection géostationnaire)
+
+- **`ReprojectFromGeos`** : reprojette une grille en **projection géostationnaire**
+  (MTG/Meteosat, coordonnées du plan satellite en mètres) vers une grille
+  **lon/lat** (EPSG:4326), toutes méthodes de rééchantillonnage. Hors-limbe → NaN.
+- Refactor interne : **`reprojectWith(toSrc func(...))`** — le cœur du
+  rééchantillonnage accepte désormais une transformation de coordonnées
+  quelconque (au-delà du registre EPSG), ce qui permet de brancher la
+  géostationnaire (non-EPSG). `Reproject` (EPSG) délègue à ce cœur.
+- Validé : scène géostationnaire → lon/lat sur l'Europe (pixels valides + bords
+  NaN, spot-check nearest). Test `TestReprojectFromGeos`.
+
 ### Ajouté (Sprint 82 — reprojection : interpolation bicubique)
 
 - **`Cubic`** ajouté aux méthodes de rééchantillonnage : convolution cubique
