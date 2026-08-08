@@ -7,6 +7,21 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 79 — projection géostationnaire (MTG/Meteosat))
+
+- **`Geostationary`** (`geos.go`) : projection satellite « geos » (lon/lat ↔
+  coordonnées du plan de vue), formules ellipsoïdales de PROJ, balayage
+  `sweep = y` (convention Meteosat/MTG). `Forward`/`Inverse` gèrent le **limbe**
+  (points invisibles → `ok=false`). **`MTGGeos()`** : paramètres MTG-I
+  (sub-satellite 0°, WGS84, hauteur 35 785 831 m).
+- Directement utile pour l'**imagerie FCI L1c** (dont la grille est en projection
+  géostationnaire).
+- Validé contre **pyproj** (`+proj=geos +sweep=y`) : écart **< 0,3 mm** sur
+  plusieurs points, aller-retour exact, détection du hors-limbe. Test
+  `TestGeostationary`.
+- CRS geos exposé comme type dédié (pas d'EPSG simple universel ; défini par une
+  chaîne PROJ).
+
 ### Ajouté (Sprint 78 — CRS : cadre de projections + UTM)
 
 - **Cadre de projections** (`geoproj.go`) : interface `projection` (lon/lat ↔
