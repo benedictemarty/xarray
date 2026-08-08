@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 77 — reprojection raster (rééchantillonnage) 4326↔3857)
+
+- **`ReprojectNearest`** et **`ReprojectDataArray`** : reprojettent un raster 2D
+  d'un CRS vers un autre par **plus proche voisin** (pour chaque pixel cible :
+  monde cible → CRS source via `TransformXY` → pixel source → échantillon). Les
+  pixels hors emprise source valent `NaN`. Le résultat porte les coordonnées
+  monde et le CRS cibles.
+- Paires gérées : **EPSG:4326 ↔ EPSG:3857** (+ identité) ; autres CRS → erreur
+  explicite (PROJ requis). Interpolation limitée au plus proche voisin.
+- Validé : reprojection 4326→3857 **identique au pixel près** à une référence
+  pyproj + nearest ; identité (grille inchangée), hors-emprise → NaN. Tests
+  `TestReproject*`.
+
 ### Ajouté (Sprint 76 — transformation de coordonnées WGS84 ↔ Web Mercator)
 
 - **`WebMercatorForward`/`WebMercatorInverse`** et **`TransformXY(from, to, x, y)`** :
