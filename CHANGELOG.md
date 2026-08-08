@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 76 — transformation de coordonnées WGS84 ↔ Web Mercator)
+
+- **`WebMercatorForward`/`WebMercatorInverse`** et **`TransformXY(from, to, x, y)`** :
+  transformation ponctuelle de coordonnées entre **EPSG:4326** (lon/lat) et
+  **EPSG:3857** (Web Mercator sphérique), en formules fermées, **sans dépendance**
+  (pas de PROJ). Alias de CRS reconnus (`CRS84`, `900913`…). Paire non gérée →
+  erreur explicite.
+- Validé contre **pyproj** : écart max **< 0,5 mm** sur des points mondiaux,
+  aller-retour exact. Test `TestWebMercator`.
+- Périmètre assumé : transformation **ponctuelle** de la paire la plus courante
+  (tuiles web) ; **pas** de moteur de reprojection généraliste ni de
+  rééchantillonnage de grille (autres CRS / datum → PROJ requis).
+
 ### Ajouté (Sprint 75 — pyramides multi-échelles Zarr (overviews))
 
 - **`WritePyramidZarr`** : écrit une pyramide d'un raster 2D — le niveau 0
