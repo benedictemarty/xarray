@@ -45,9 +45,36 @@ func TestTransformChain(t *testing.T) {
 	}
 }
 
+// TestLambert93 valide EPSG:2154 (Lambert-93) contre pyproj sur des points
+// répartis en France métropolitaine, avec aller-retour.
+func TestLambert93(t *testing.T) {
+	cases := []struct {
+		lon, lat, ex, ey float64
+	}{
+		{3.0, 46.5, 700000.000, 6600000.000},       // origine
+		{2.3522, 48.8566, 652469.023, 6862035.259}, // Paris
+		{-1.55, 47.22, 355860.030, 6689884.836},    // Nantes
+		{7.75, 48.58, 1050163.944, 6841622.715},    // Strasbourg
+	}
+	for _, c := range cases {
+		x, y, err := TransformXY("EPSG:4326", "EPSG:2154", c.lon, c.lat)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if math.Abs(x-c.ex) > 0.01 || math.Abs(y-c.ey) > 0.01 {
+			t.Errorf("(%.4f,%.4f) -> (%.3f,%.3f), pyproj (%.3f,%.3f)", c.lon, c.lat, x, y, c.ex, c.ey)
+		}
+		lon, lat, _ := TransformXY("EPSG:2154", "EPSG:4326", x, y)
+		if math.Abs(lon-c.lon) > 1e-7 || math.Abs(lat-c.lat) > 1e-7 {
+			t.Errorf("aller-retour (%.8f,%.8f)", lon, lat)
+		}
+	}
+}
+
 func TestProjectionForUnsupported(t *testing.T) {
-	if _, _, err := TransformXY("EPSG:4326", "EPSG:2154", 3, 45); err == nil {
-		t.Error("erreur attendue : Lambert-93 non géré")
+	// CRS réellement non géré (Lambert zone II historique).
+	if _, _, err := TransformXY("EPSG:4326", "EPSG:27572", 3, 45); err == nil {
+		t.Error("erreur attendue : EPSG:27572 non géré")
 	}
 	// Zone UTM invalide.
 	if _, _, err := TransformXY("EPSG:4326", "EPSG:32699", 3, 45); err == nil {

@@ -7,6 +7,15 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 80 — CRS : Lambert-93 (EPSG:2154))
+
+- **Lambert Conformal Conic** (2 parallèles, formules de Snyder) ajoutée au
+  registre : **`EPSG:2154`** (Lambert-93, CRS officiel français). Prise en charge
+  par `TransformXY` et, par ricochet, par `ReprojectNearest`.
+- Validé contre **pyproj** : écart **< 0,5 mm** sur Paris/Nantes/Strasbourg +
+  origine, aller-retour exact. Test `TestLambert93`. (Ellipsoïde WGS84 : la
+  différence avec GRS80/RGF93 est négligeable, < 1 mm.)
+
 ### Ajouté (Sprint 79 — projection géostationnaire (MTG/Meteosat))
 
 - **`Geostationary`** (`geos.go`) : projection satellite « geos » (lon/lat ↔

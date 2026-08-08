@@ -87,6 +87,58 @@ func (t transverseMercator) inverse(x, y float64) (float64, float64) {
 	return lon * 180 / math.Pi, lat * 180 / math.Pi
 }
 
+// lambertConformalConic : projection conique conforme de Lambert à deux
+// parallèles (base d'EPSG:2154, Lambert-93). Angles en degrés.
+type lambertConformalConic struct {
+	lat0, lon0, lat1, lat2, fe, fn float64
+}
+
+func lccT(lat, e float64) float64 {
+	es := e * math.Sin(lat)
+	return math.Tan(math.Pi/4-lat/2) / math.Pow((1-es)/(1+es), e/2)
+}
+
+func lccM(lat, e2 float64) float64 {
+	s := math.Sin(lat)
+	return math.Cos(lat) / math.Sqrt(1-e2*s*s)
+}
+
+func (l lambertConformalConic) params() (a, e, n, F, rho0 float64) {
+	a, e2 := wgs84A, wgs84F*(2-wgs84F)
+	e = math.Sqrt(e2)
+	lat0 := l.lat0 * math.Pi / 180
+	lat1 := l.lat1 * math.Pi / 180
+	lat2 := l.lat2 * math.Pi / 180
+	m1, m2 := lccM(lat1, e2), lccM(lat2, e2)
+	t0, t1, t2 := lccT(lat0, e), lccT(lat1, e), lccT(lat2, e)
+	n = (math.Log(m1) - math.Log(m2)) / (math.Log(t1) - math.Log(t2))
+	F = m1 / (n * math.Pow(t1, n))
+	rho0 = a * F * math.Pow(t0, n)
+	return a, e, n, F, rho0
+}
+
+func (l lambertConformalConic) forward(lon, lat float64) (float64, float64) {
+	a, e, n, F, rho0 := l.params()
+	rho := a * F * math.Pow(lccT(lat*math.Pi/180, e), n)
+	theta := n * (lon - l.lon0) * math.Pi / 180
+	return l.fe + rho*math.Sin(theta), l.fn + rho0 - rho*math.Cos(theta)
+}
+
+func (l lambertConformalConic) inverse(x, y float64) (float64, float64) {
+	a, e, n, F, rho0 := l.params()
+	dx, dy := x-l.fe, rho0-(y-l.fn)
+	rho := math.Copysign(math.Hypot(dx, dy), n)
+	tp := math.Pow(rho/(a*F), 1/n)
+	theta := math.Atan2(dx, dy)
+	lon := theta/n*180/math.Pi + l.lon0
+	lat := math.Pi/2 - 2*math.Atan(tp)
+	for i := 0; i < 15; i++ { // convergence (série non explicite)
+		es := e * math.Sin(lat)
+		lat = math.Pi/2 - 2*math.Atan(tp*math.Pow((1-es)/(1+es), e/2))
+	}
+	return lon, lat * 180 / math.Pi
+}
+
 // projectionFor renvoie la projection d'un code EPSG normalisé, et un booléen
 // « géographique » (auquel cas x/y sont lon/lat, sans projection).
 func projectionFor(epsg string) (projection, bool, error) {
@@ -95,6 +147,8 @@ func projectionFor(epsg string) (projection, bool, error) {
 		return nil, true, nil
 	case "3857":
 		return webMercatorProj{}, false, nil
+	case "2154": // Lambert-93 (France)
+		return lambertConformalConic{lat0: 46.5, lon0: 3, lat1: 44, lat2: 49, fe: 700000, fn: 6600000}, false, nil
 	}
 	// UTM : 326zz (nord) / 327zz (sud), zz = numéro de zone 01..60.
 	if len(epsg) == 5 && (epsg[:3] == "326" || epsg[:3] == "327") {

@@ -37,7 +37,7 @@ func TestTransformXYCases(t *testing.T) {
 		t.Errorf("identité = (%v,%v,%v)", x, y, err)
 	}
 	// Paire non prise en charge -> erreur explicite.
-	if _, _, err := TransformXY("EPSG:4326", "EPSG:2154", 3, 45); err == nil {
-		t.Error("erreur attendue : CRS non géré (Lambert-93)")
+	if _, _, err := TransformXY("EPSG:4326", "EPSG:27572", 3, 45); err == nil {
+		t.Error("erreur attendue : CRS non géré (Lambert II historique)")
 	}
 }

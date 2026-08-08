@@ -74,7 +74,7 @@ func TestReprojectOutOfBounds(t *testing.T) {
 func TestReprojectUnsupportedCRS(t *testing.T) {
 	src := []float64{1, 2, 3, 4}
 	tr := Affine{A: 1, E: -1, F: 2}
-	if _, err := ReprojectNearest(src, 2, 2, tr, "EPSG:4326", tr, 2, 2, "EPSG:2154"); err == nil {
+	if _, err := ReprojectNearest(src, 2, 2, tr, "EPSG:4326", tr, 2, 2, "EPSG:27572"); err == nil {
 		t.Error("erreur attendue : CRS non pris en charge")
 	}
 }
