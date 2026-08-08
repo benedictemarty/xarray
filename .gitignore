@@ -10,6 +10,21 @@
 coverage.out
 coverage.html
 
+# Secrets / configuration locale (ex. identifiants EUMETSAT)
+.env
+*.env
+
+# Binaires de commandes compilés à la racine (go build ./cmd/xxx)
+/ndvi
+/reproject
+/genzarr
+/genzarrds
+/readzarr
+/benchzarr
+/benchexpr
+/readgrib
+/readgrib-ec
+
 # Divers
 .DS_Store
 vendor/
