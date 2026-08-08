@@ -7,6 +7,21 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 78 — CRS : cadre de projections + UTM)
+
+- **Cadre de projections** (`geoproj.go`) : interface `projection` (lon/lat ↔
+  mètres), registre par code EPSG, transformation entre CRS via le **pivot
+  géographique WGS84**. `TransformXY` gère désormais **toute paire** de CRS pris
+  en charge (plus seulement 4326↔3857).
+- **UTM WGS84** (`EPSG:326zz`/`327zz`, zones 1–60, nord/sud) : Mercator transverse
+  ellipsoïdal (formules de Snyder), sans dépendance PROJ.
+- Validé contre **pyproj** : écart **< 0,3 mm** sur zones 31N/32N/21S,
+  aller-retour exact, et chaînage UTM→3857 cohérent. Tests `TestUTM`,
+  `TestTransformChain`. La **reprojection raster** (`ReprojectNearest`) bénéficie
+  automatiquement des nouveaux CRS.
+- Réserve : CRS de la **famille WGS84** uniquement (pas de transformation de
+  datum) ; autres projections/datums → PROJ.
+
 ### Ajouté (Sprint 77 — reprojection raster (rééchantillonnage) 4326↔3857)
 
 - **`ReprojectNearest`** et **`ReprojectDataArray`** : reprojettent un raster 2D

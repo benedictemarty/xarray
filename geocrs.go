@@ -1,7 +1,6 @@
 package xarray
 
 import (
-	"fmt"
 	"math"
 	"strings"
 )
@@ -49,24 +48,35 @@ func normalizeCRS(crs string) string {
 	return c
 }
 
-// TransformXY transforme un couple de coordonnées de fromCRS vers toCRS. Les
-// paires prises en charge : EPSG:4326 ↔ EPSG:3857 (et l'identité). Renvoie une
-// erreur pour toute autre paire (utiliser PROJ pour les CRS non gérés).
+// TransformXY transforme un couple de coordonnées de fromCRS vers toCRS, en
+// passant par le géographique WGS84 (lon/lat) comme pivot. CRS pris en charge :
+// EPSG:4326 (lon/lat), EPSG:3857 (Web Mercator), UTM WGS84 (EPSG:326zz/327zz).
+// Toute autre paire → erreur explicite (PROJ requis).
 //
-// Convention x/y : en 4326, x = longitude, y = latitude (degrés) ; en 3857,
+// Convention x/y : en 4326, x = longitude, y = latitude (degrés) ; en projeté,
 // (x, y) en mètres.
 func TransformXY(fromCRS, toCRS string, x, y float64) (float64, float64, error) {
 	from, to := normalizeCRS(fromCRS), normalizeCRS(toCRS)
-	switch {
-	case from == to:
+	if from == to {
 		return x, y, nil
-	case from == "4326" && to == "3857":
-		nx, ny := WebMercatorForward(x, y)
-		return nx, ny, nil
-	case from == "3857" && to == "4326":
-		nlon, nlat := WebMercatorInverse(x, y)
-		return nlon, nlat, nil
-	default:
-		return 0, 0, fmt.Errorf("xarray: transformation %s→%s non prise en charge (seul 4326↔3857 ; utilisez PROJ pour les autres)", fromCRS, toCRS)
 	}
+	fromProj, fromGeo, err := projectionFor(from)
+	if err != nil {
+		return 0, 0, err
+	}
+	toProj, toGeo, err := projectionFor(to)
+	if err != nil {
+		return 0, 0, err
+	}
+	// 1) fromCRS -> géographique (lon/lat).
+	lon, lat := x, y
+	if !fromGeo {
+		lon, lat = fromProj.inverse(x, y)
+	}
+	// 2) géographique -> toCRS.
+	if toGeo {
+		return lon, lat, nil
+	}
+	nx, ny := toProj.forward(lon, lat)
+	return nx, ny, nil
 }
