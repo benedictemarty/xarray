@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté (Sprint 84 — rééchantillonnage de fauchée (satellites défilants))
+
+- **`ResampleSwathNearest`** / **`SwathToDataArray`** : rééchantillonnent des
+  données en **fauchée (swath)** — pixels géolocalisés par leurs propres
+  tableaux `lon`/`lat` (satellites **défilants** : Sentinel-3, MetOp, VIIRS,
+  NOAA…) — vers une **grille régulière** lon/lat, par affectation au plus proche
+  (« drop-in-the-bucket » : moyenne des collisions, cellules vides → NaN).
+- Rend une fauchée (géolocalisation 2D irrégulière, non subsettable telle quelle)
+  **subsettable** comme une grille (`SubsetBBox`, `Query`…). Équivalent minimal
+  (plus proche voisin) de pyresample.
+- Validé : binning, moyenne des collisions, cellules vides, géoréférencement du
+  résultat. Tests `TestResampleSwathNearest`, `TestSwathToDataArray`.
+
 ### Ajouté (Sprint 83 — reprojection depuis la projection géostationnaire)
 
 - **`ReprojectFromGeos`** : reprojette une grille en **projection géostationnaire**
